@@ -1,0 +1,16 @@
+{
+  "version": "opxyloop-1.0",
+  "meta": { "tempo": 120, "ppq": 480, "stepsPerBar": 16 },
+  "deviceProfile": { "portName": "OP-XY", "drumMap": { "kick": 36, "snare": 38, "ch": 42, "oh": 46 } },
+  "tracks": [
+    {
+      "id": "t-drum",
+      "name": "Drums",
+      "type": "sampler",
+      "midiChannel": 9,
+      "role": "drums",
+      "pattern": { "lengthBars": 1, "steps": [] }
+    }
+  ]
+}
+

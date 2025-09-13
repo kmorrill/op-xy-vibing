@@ -137,7 +137,7 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
   - Milestone ID and title (e.g., `M2 – Engine Skeleton + Note Lifecycle`).
   - Completed: succinct bullet(s) of finished work.
   - Pickup: the next concrete step with file/function paths.
-  - Verify: exact command(s)/tests to run; expected outcome.
+  - Verify: exact command(s)/tests to run; expected outcome; record pass/fail.
   - Context: related commits/checkpoints, `docVersion`, open questions.
 - Keep latest entry first; timestamp each entry in ISO format.
 
@@ -151,4 +151,25 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 ```
 
 ## Progress Log
+- [2025-09-13T16:50:00Z] M2 (setup) – Engine Skeleton + Tests
+  - Completed: Added `conductor/midi_engine.py`, unit tests in `conductor/tests/test_rt_sanity.py`, and `make test` / `make demo-note` targets.
+  - Verify: `make test` passes (3 tests green); `make demo-note` prints on/off pair; `make validate-fixtures` prints `ok` for fixtures.
+  - Pickup: Extract clock into `conductor/clock.py` with pluggable internal/external sources; wire engine to a tick bus; add drumKit scheduling tests.
+  - Context: Branch `feat/m0-validator-fixtures`; PR #2.
+- [2025-09-13T16:42:00Z] P1 – Clock Smoke Test
+  - Completed: Added `conductor/clock_smoke.py` and `make clock-smoke` (24 PPQN jitter report over 5s).
+  - Pickup: Move clock into a reusable `clock.py` with pluggable sources (internal/external) and message bus to engine; prepare harness hooks to inject synthetic external pulses.
+  - Verify: `make clock-smoke` prints p95/p99 jitter; aim for p95 < 2ms on dev. Optimize later using OS timers.
+  - Context: Branch `feat/m0-validator-fixtures`; PR #2.
+- [2025-09-13T16:35:00Z] M0 – Spec, Fixtures, Canonicalizer
+  - Completed: Added validator/canonicalizer (`conductor/validator.py`) with core checks (version, meta, tracks, pattern/steps, drumKit, ccLanes, lfos) and canonical sorting; added fixtures (`conductor/tests/fixtures/*.json`); Makefile targets `validate-fixtures` and `canonicalize-fixtures`.
+  - Pickup: Add JSON Schema (`docs/opxyloop-1.0.schema.json`) aligned to spec §1–§10 and wire optional stricter validation behind a `--strict` flag; extend validator checks for chord/degree hints and CC point curves; document hash policy in `PROJECT_PLAN.md` Interfaces.
+  - Verify: `make validate-fixtures` prints SHA-256 and `ok` for all fixtures; `make canonicalize-fixtures` rewrites fixtures in canonical format without diffs on second pass.
+  - Context: Branch `main`; checkpoint via Git PR #1; Spec present at `docs/opxyloop-1.0.md`.
 - (Add newest entries above this line.)
+
+## Verification & DoD Policy
+- No milestone or pickup task is “done” until tests are executed and passing locally and in PR CI.
+- Always include `Verify:` commands in Progress Log entries and record the pass result (e.g., `make test`, specialized harness checks).
+- If a test is flaky, treat it as failing; reduce flakiness (tolerances, fake time) or fix root cause before marking done.
+- For runtime changes, include a minimal demo command (e.g., `make demo-note`) that proves behavior alongside unit tests.
