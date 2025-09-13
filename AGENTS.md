@@ -151,6 +151,11 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 ```
 
 ## Progress Log
+- [2025-09-13T16:42:00Z] P1 – Clock Smoke Test
+  - Completed: Added `conductor/clock_smoke.py` and `make clock-smoke` (24 PPQN jitter report over 5s).
+  - Pickup: Move clock into a reusable `clock.py` with pluggable sources (internal/external) and message bus to engine; prepare harness hooks to inject synthetic external pulses.
+  - Verify: `make clock-smoke` prints p95/p99 jitter; aim for p95 < 2ms on dev. Optimize later using OS timers.
+  - Context: Branch `feat/m0-validator-fixtures`; PR #2.
 - [2025-09-13T16:35:00Z] M0 – Spec, Fixtures, Canonicalizer
   - Completed: Added validator/canonicalizer (`conductor/validator.py`) with core checks (version, meta, tracks, pattern/steps, drumKit, ccLanes, lfos) and canonical sorting; added fixtures (`conductor/tests/fixtures/*.json`); Makefile targets `validate-fixtures` and `canonicalize-fixtures`.
   - Pickup: Add JSON Schema (`docs/opxyloop-1.0.schema.json`) aligned to spec §1–§10 and wire optional stricter validation behind a `--strict` flag; extend validator checks for chord/degree hints and CC point curves; document hash policy in `PROJECT_PLAN.md` Interfaces.
