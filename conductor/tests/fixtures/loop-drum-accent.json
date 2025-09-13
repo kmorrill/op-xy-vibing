@@ -1,0 +1,28 @@
+{
+  "version": "opxyloop-1.0",
+  "meta": { "tempo": 112, "ppq": 96, "stepsPerBar": 16 },
+  "deviceProfile": {
+    "portName": "OP-XY",
+    "drumMap": { "kick": 36, "snare": 38, "clap": 39, "ch": 42, "oh": 46 }
+  },
+  "tracks": [
+    {
+      "id": "t-drums",
+      "name": "Drums (one-track)",
+      "type": "sampler",
+      "midiChannel": 9,
+      "role": "drums",
+      "drumKit": {
+        "patterns": [
+          { "bar": 1, "key": "kick",  "pattern": "x...x...x...x...", "vel": 120 },
+          { "bar": 1, "key": "snare", "pattern": "....x.......x...", "vel": 110 },
+          { "bar": 1, "key": "ch",    "pattern": ".x.x.x.x.x.x.x.x", "vel": 80  }
+        ],
+        "repeatBars": 1,
+        "lengthSteps": 1
+      },
+      "pattern": { "lengthBars": 1, "steps": [] }
+    }
+  ]
+}
+

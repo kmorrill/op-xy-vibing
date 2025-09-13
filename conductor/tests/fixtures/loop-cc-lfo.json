@@ -1,0 +1,43 @@
+{
+  "version": "opxyloop-1.0",
+  "meta": { "tempo": 120, "ppq": 480, "stepsPerBar": 16 },
+  "deviceProfile": { "portName": "OP-XY", "drumMap": { "kick": 36, "snare": 38 } },
+  "tracks": [
+    {
+      "id": "t-kit",
+      "name": "Kit",
+      "type": "sampler",
+      "midiChannel": 9,
+      "role": "drums",
+      "pattern": {
+        "lengthBars": 1,
+        "steps": [
+          { "idx": 0,  "events": [{ "pitch": 36, "velocity": 120, "lengthSteps": 1 }] },
+          { "idx": 8,  "events": [{ "pitch": 38, "velocity": 105, "lengthSteps": 1 }] }
+        ]
+      },
+      "ccLanes": [
+        {
+          "id": "cutoff-rise",
+          "dest": "name:cutoff",
+          "mode": "ramp",
+          "points": [
+            { "t": { "bar": 0, "step": 0 },  "v": 40 },
+            { "t": { "bar": 0, "step": 15 }, "v": 100 }
+          ]
+        }
+      ],
+      "lfos": [
+        {
+          "id": "res-wobble",
+          "dest": "name:resonance",
+          "depth": 18,
+          "rate": { "sync": "1/8" },
+          "shape": "triangle",
+          "offset": 64
+        }
+      ]
+    }
+  ]
+}
+

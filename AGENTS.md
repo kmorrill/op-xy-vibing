@@ -151,4 +151,9 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 ```
 
 ## Progress Log
+- [2025-09-13T16:35:00Z] M0 – Spec, Fixtures, Canonicalizer
+  - Completed: Added validator/canonicalizer (`conductor/validator.py`) with core checks (version, meta, tracks, pattern/steps, drumKit, ccLanes, lfos) and canonical sorting; added fixtures (`conductor/tests/fixtures/*.json`); Makefile targets `validate-fixtures` and `canonicalize-fixtures`.
+  - Pickup: Add JSON Schema (`docs/opxyloop-1.0.schema.json`) aligned to spec §1–§10 and wire optional stricter validation behind a `--strict` flag; extend validator checks for chord/degree hints and CC point curves; document hash policy in `PROJECT_PLAN.md` Interfaces.
+  - Verify: `make validate-fixtures` prints SHA-256 and `ok` for all fixtures; `make canonicalize-fixtures` rewrites fixtures in canonical format without diffs on second pass.
+  - Context: Branch `main`; checkpoint via Git PR #1; Spec present at `docs/opxyloop-1.0.md`.
 - (Add newest entries above this line.)
