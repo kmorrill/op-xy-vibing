@@ -19,3 +19,6 @@ canonicalize-fixtures:
 		$(PY) -m conductor.validator $$f --write; \
 	done
 
+.PHONY: clock-smoke
+clock-smoke:
+	@$(PY) -m conductor.clock_smoke --bpm 120 --seconds 5
