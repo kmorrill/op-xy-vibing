@@ -1,6 +1,6 @@
 PY := python3
 
-.PHONY: validate validate-fixtures hash-fixtures
+.PHONY: validate validate-fixtures hash-fixtures test demo-note
 
 validate:
 	@$(PY) -m conductor.validator $(FILE)
@@ -22,3 +22,9 @@ canonicalize-fixtures:
 .PHONY: clock-smoke
 clock-smoke:
 	@$(PY) -m conductor.clock_smoke --bpm 120 --seconds 5
+
+test:
+	@$(PY) -m unittest discover -s conductor/tests -p "test_*.py" -v
+
+demo-note:
+	@$(PY) -m conductor.demo_note
