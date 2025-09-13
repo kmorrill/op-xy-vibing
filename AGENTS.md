@@ -151,6 +151,11 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 ```
 
 ## Progress Log
+- [2025-09-13T17:05:00Z] M3 groundwork – DrumKit scheduling + tests
+  - Completed: Engine schedules `drumKit` hits at step boundaries with `repeatBars`; GM fallback for `drumMap`; tests cover single-bar counts, repeats, and coexistence with `pattern.steps`.
+  - Verify: `make test` (6 tests green).
+  - Pickup: Extract `conductor/clock.py` with internal/external sources and a tick bus; add transport tests (Start/Stop/Continue, SPP reposition). Then wire Conductor JSON Patch gate and atomic writes.
+  - Context: Branch `feat/m2-drumkit-and-tests`; PR #3.
 - [2025-09-13T16:50:00Z] M2 (setup) – Engine Skeleton + Tests
   - Completed: Added `conductor/midi_engine.py`, unit tests in `conductor/tests/test_rt_sanity.py`, and `make test` / `make demo-note` targets.
   - Verify: `make test` passes (3 tests green); `make demo-note` prints on/off pair; `make validate-fixtures` prints `ok` for fixtures.
