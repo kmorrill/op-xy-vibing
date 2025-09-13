@@ -93,19 +93,26 @@ class Engine:
         meta = self.doc.get("meta", {})
         spb = int(meta.get("stepsPerBar", 16))
         bar_ticks = self.step_ticks * spb
+        dev = self.doc.get("deviceProfile", {})
+        drum_map = {}
+        if isinstance(dev, dict) and isinstance(dev.get("drumMap"), dict):
+            drum_map = {k: int(v) for k, v in dev["drumMap"].items() if isinstance(k, str)}
+        # GM-safe fallback
+        if not drum_map:
+            drum_map = {"kick": 36, "snare": 38, "clap": 39, "ch": 42, "oh": 46}
         for tr in tracks:
             ch = int(tr.get("midiChannel", 0))
             pat = tr.get("pattern", {})
             steps = pat.get("steps", [])
+            length_bars = max(1, int(pat.get("lengthBars", 1)))
             for st in steps:
                 idx = int(st.get("idx", -1))
                 if idx < 0:
                     continue
-                step_tick = (idx % (spb * max(1, int(pat.get("lengthBars", 1)))))
-                step_tick = (step_tick % (spb * max(1, int(pat.get("lengthBars", 1)))))
+                step_tick = (idx % (spb * length_bars))
                 step_tick *= self.step_ticks
                 # Emit only when exactly due at this tick (no look-ahead)
-                if (tick % (bar_ticks * max(1, int(pat.get("lengthBars", 1))))) == step_tick:
+                if (tick % (bar_ticks * length_bars)) == step_tick:
                     events = st.get("events", [])
                     for e in events:
                         pitch = e.get("pitch")
@@ -127,6 +134,52 @@ class Engine:
                         self.active.setdefault(key, []).append(
                             NoteEvent(channel=ch, pitch=int(pitch), velocity=vel, on_tick=on_tick, off_tick=off_tick, note_id=note_id)
                         )
+
+            # drumKit runtime scheduling
+            dk = tr.get("drumKit")
+            if isinstance(dk, dict) and isinstance(dk.get("patterns"), list):
+                patterns = dk.get("patterns", [])
+                repeat_bars = max(1, int(dk.get("repeatBars", 1)))
+                default_len = max(1, int(dk.get("lengthSteps", 1)))
+                # Current bar within loop (1-based per spec)
+                bar_in_loop = ((tick // bar_ticks) % length_bars) + 1
+                # Step within current bar
+                if self.step_ticks > 0:
+                    step_in_bar = (tick % bar_ticks) // self.step_ticks
+                else:
+                    step_in_bar = 0
+                # Only schedule on exact step boundaries
+                if self.step_ticks == 0 or (tick % self.step_ticks) != 0:
+                    return
+                for spec in patterns:
+                    try:
+                        b0 = int(spec.get("bar", 1))
+                        key = str(spec.get("key"))
+                        pattern_str = str(spec.get("pattern"))
+                    except Exception:
+                        continue
+                    # Active if bar_in_loop within [b0, b0+repeat_bars-1]
+                    if not (b0 <= bar_in_loop <= (b0 + repeat_bars - 1)):
+                        continue
+                    if step_in_bar < 0 or step_in_bar >= len(pattern_str):
+                        continue
+                    if pattern_str[step_in_bar] != "x":
+                        continue
+                    # Resolve pitch from drum map (skip if unknown)
+                    if key not in drum_map:
+                        continue
+                    pitch = int(drum_map[key])
+                    vel = int(spec.get("vel", 100))
+                    ls = int(spec.get("lengthSteps", default_len))
+                    length_ticks = max(1, int(self.step_ticks * ls))
+                    on_tick = tick
+                    off_tick = tick + length_ticks
+                    note_id = self._next_note_id
+                    self._next_note_id += 1
+                    self.sink.note_on(ch, pitch, vel)
+                    self.active.setdefault((ch, pitch), []).append(
+                        NoteEvent(channel=ch, pitch=pitch, velocity=vel, on_tick=on_tick, off_tick=off_tick, note_id=note_id)
+                    )
 
     def _emit_due_offs(self, tick: int) -> None:
         # Iterate all active notes and emit offs due exactly at this tick
@@ -152,4 +205,3 @@ class Engine:
                 stack.pop()
         self.active.clear()
         self.sink.panic()
-
