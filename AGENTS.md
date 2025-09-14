@@ -146,6 +146,17 @@ Policy:
   - `pids=$(lsof -t -iTCP:8765 -sTCP:LISTEN 2>/dev/null || true); [ -n "$pids" ] && kill $pids || true; sleep 1; [ -n "$pids" ] && kill -9 $pids || true`
   - `python - <<'PY'\nfrom conductor.midi_out import open_mido_output, MidoSink\nout=open_mido_output('OP-XY'); MidoSink(out).panic()\nPY`
 
+### Velocity A/B Smoke (human listening)
+- Goal: Prove velocity dynamics end‑to‑end with an unmistakable loud‑vs‑quiet pattern.
+- Fixture: Channel 1, note D3, alternating loud/quiet with rests (`conductor/tests/fixtures/loop-vel-alt-ch1-d3.json`).
+- Listen for (at 100 BPM):
+  - Bar 1: loud hit (127), rest, very quiet hit (10).
+  - Bar 2: loud hit (127), rest, very quiet hit (10).
+  - No other modulation; loop stops after 2 bars.
+- Run (after Real Device Safety cleanup):
+  - `python -m conductor.play_local conductor/tests/fixtures/loop-vel-alt-ch1-d3.json --mode internal --bpm 100 --port 'OP-XY' --loops 1`
+- Tip: Ensure OP‑XY Track 1 uses a velocity‑sensitive patch; otherwise loud/quiet may sound identical even though MIDI is correct.
+
 ## WebSocket Types (first cut)
 - Inbound: `play`, `stop`, `continue`, `setTempo{bpm}`, `applyPatch{baseVersion,ops[]}`, `replaceJSON{baseVersion,doc}`.
 - Outbound: `state{transport,clockSource,bpm,barBeatTick}`, `doc{docVersion,json}`, `error{code,message,details}`, `metrics{msgPerSec,jitterMsP95,dropped,clockSrc}`.
