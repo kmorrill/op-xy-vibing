@@ -199,6 +199,11 @@ Policy:
   - Verify: `make test` (12 tests green).
   - Pickup: Integrate WS broadcaster into a Conductor process stub emitting `state/doc/metrics`; start wiring JSON Patch gate (no-ops allowed).
   - Context: changes on `main`.
+- [2025-09-14T01:10:00Z] M3e – Stuck Note Panic Hardening
+  - Completed: Enhanced panic to send Sustain Off (CC64=0) + All Sound Off (CC120=0) + All Notes Off (CC123=0) on all channels, in addition to per-note offs from the ledger.
+  - Verify: Real-device smoke `make play-cc-lfo-ch0 PORT='OP-XY' BPM=60 METRICS=--metrics --` ends with no stuck notes.
+  - Pickup: Conductor WS skeleton next; ensure panic wired to transport Stop in that process as well.
+  - Context: changes on `main`.
 - [2025-09-13T17:20:00Z] M2.5 – Local OP‑XY Player (real device)
   - Completed: Added `conductor/play_local.py` (internal/external clock), `conductor/midi_out.py` (MIDI sink via mido), `conductor/clock.py`; Makefile `play-internal` / `play-external`; `requirements.txt` (mido + python-rtmidi).
   - Verify: With OP‑XY connected, `pip install -r requirements.txt`, then `make play-internal LOOP=conductor/tests/fixtures/loop-drum-accent.json PORT='OP-XY' BPM=120` (OP‑XY should follow and play drums). For external, set OP‑XY as master and run `make play-external ...` and press Play on device.
