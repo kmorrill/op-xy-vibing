@@ -184,6 +184,11 @@ Policy:
   - Verify: `make test` (10 tests green); device smoke `make play-cc-lfo-ch0 PORT='OP-XY' BPM=60` and confirm cutoff (CC32) ramps and resonance (CC33) wobbles; phase resets on Play/bar.
   - Pickup: add metrics counters and jitter aggregation; external transport behavior tests for Continue vs Start; basic rate guards for CC shed; begin Conductor WS skeleton for state/doc broadcast.
   - Context: branch `feat/m3-cc-lfo-external`, tag `ckpt-m3a`.
+- [2025-09-14T00:25:00Z] M3b – Metrics + CC Rate Guard (slice)
+  - Completed: Engine metrics counters (note_on/off, cc, shed_cc); per-tick CC rate guard with unit test ensuring CCs shed while notes play; `--metrics` printing in `play_local` and `make play-cc-lfo-ch0` passthrough.
+  - Verify: `make test` (11 tests green); device smoke `make play-cc-lfo-ch0 PORT='OP-XY' BPM=60 METRICS=--metrics` and observe metrics printing once per second.
+  - Pickup: external transport Continue semantics test; jitter aggregation in `InternalClock`; Conductor WS broadcaster skeleton for `state/doc/metrics`.
+  - Context: merged into `main` via PR #5; continue M3 work on new PR.
 - [2025-09-13T17:20:00Z] M2.5 – Local OP‑XY Player (real device)
   - Completed: Added `conductor/play_local.py` (internal/external clock), `conductor/midi_out.py` (MIDI sink via mido), `conductor/clock.py`; Makefile `play-internal` / `play-external`; `requirements.txt` (mido + python-rtmidi).
   - Verify: With OP‑XY connected, `pip install -r requirements.txt`, then `make play-internal LOOP=conductor/tests/fixtures/loop-drum-accent.json PORT='OP-XY' BPM=120` (OP‑XY should follow and play drums). For external, set OP‑XY as master and run `make play-external ...` and press Play on device.

@@ -17,7 +17,7 @@ def load_loop(path: str) -> dict:
         return json.load(f)
 
 
-def run_internal(loop_path: str, port_filter: Optional[str], bpm: float, loops: Optional[int] = None):
+def run_internal(loop_path: str, port_filter: Optional[str], bpm: float, loops: Optional[int] = None, print_metrics: bool = False):
     import mido
 
     loop = load_loop(loop_path)
@@ -78,6 +78,13 @@ def run_internal(loop_path: str, port_filter: Optional[str], bpm: float, loops: 
 
     clk = InternalClock(bpm=bpm, tick_handler=on_clock_pulse, send_midi_clock=send_midi_clock)
 
+    def metrics_printer():
+        import time
+        while not done.is_set():
+            m = eng.get_metrics()
+            print(f"[metrics] note_on={m.get('msgs_note_on',0)} note_off={m.get('msgs_note_off',0)} cc={m.get('msgs_cc',0)} shed_cc={m.get('shed_cc',0)}")
+            time.sleep(1.0)
+
     def shutdown(*_):
         clk.stop()
         eng.stop()
@@ -88,6 +95,9 @@ def run_internal(loop_path: str, port_filter: Optional[str], bpm: float, loops: 
     signal.signal(signal.SIGTERM, shutdown)
 
     clk.start()
+    if print_metrics:
+        t = threading.Thread(target=metrics_printer, daemon=True)
+        t.start()
     # Wait until requested loops complete or until interrupted
     if stop_at_tick is not None:
         done.wait()
@@ -149,10 +159,11 @@ def main():
     ap.add_argument("--mode", choices=["internal", "external"], default="internal", help="Clock mode: internal or external (OP-XY master)")
     ap.add_argument("--bpm", type=float, default=120.0, help="BPM when using internal mode")
     ap.add_argument("--loops", type=int, default=0, help="Number of full loop cycles to play (internal mode). 0 = infinite")
+    ap.add_argument("--metrics", action="store_true", help="Print basic runtime metrics once per second (internal mode)")
     args = ap.parse_args()
 
     if args.mode == "internal":
-        run_internal(args.loop, args.port, args.bpm, loops=(args.loops if args.loops and args.loops > 0 else None))
+        run_internal(args.loop, args.port, args.bpm, loops=(args.loops if args.loops and args.loops > 0 else None), print_metrics=bool(args.metrics))
     else:
         run_external(args.loop, args.port)
 

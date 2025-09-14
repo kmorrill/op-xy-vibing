@@ -45,7 +45,7 @@ class Engine:
     - Active notes ledger guarantees Note Off, even on doc replace.
     """
 
-    def __init__(self, sink: VirtualSink) -> None:
+    def __init__(self, sink: VirtualSink, limits: Dict[str, int] | None = None) -> None:
         self.sink = sink
         self.doc: Dict[str, Any] | None = None
         self.meta: Dict[str, Any] | None = None
@@ -59,6 +59,17 @@ class Engine:
         self._last_cc: Dict[Tuple[int, int], int] = {}
         # LFO phase resets on start and bar boundary (tracked via step counter)
         self._started: bool = False
+        # Metrics counters
+        self.metrics: Dict[str, int] = {
+            "msgs_note_on": 0,
+            "msgs_note_off": 0,
+            "msgs_cc": 0,
+            "shed_cc": 0,
+        }
+        # Simple per-tick CC guard limits (for tests/runtime safety)
+        limits = limits or {}
+        self.cc_limit_per_tick_global: int = int(limits.get("cc_per_tick_global", 1_000_000))
+        self.cc_limit_per_tick_track: int = int(limits.get("cc_per_tick_track", 1_000_000))
 
     # --- Public control ---
     def load(self, doc: Dict[str, Any]) -> None:
@@ -94,6 +105,10 @@ class Engine:
         self._emit_due_ons(tick)
         # CC/LFO updates on step boundaries
         self._emit_cc_updates(tick)
+
+    def get_metrics(self) -> Dict[str, int]:
+        # Return a shallow copy of metrics (e.g., for printing/broadcasting)
+        return dict(self.metrics)
 
     # --- Internals ---
     def _emit_due_ons(self, tick: int) -> None:
@@ -139,6 +154,7 @@ class Engine:
                         self._next_note_id += 1
                         # Emit Note On
                         self.sink.note_on(ch, int(pitch), vel)
+                        self.metrics["msgs_note_on"] += 1
                         # Push to active ledger (stack semantics for overlaps)
                         key = (ch, int(pitch))
                         self.active.setdefault(key, []).append(
@@ -187,6 +203,7 @@ class Engine:
                     note_id = self._next_note_id
                     self._next_note_id += 1
                     self.sink.note_on(ch, pitch, vel)
+                    self.metrics["msgs_note_on"] += 1
                     self.active.setdefault((ch, pitch), []).append(
                         NoteEvent(channel=ch, pitch=pitch, velocity=vel, on_tick=on_tick, off_tick=off_tick, note_id=note_id)
                     )
@@ -201,6 +218,7 @@ class Engine:
                 if ne.off_tick <= tick:
                     # Due (or overdue) -> emit off and remove
                     self.sink.note_off(ch, pitch)
+                    self.metrics["msgs_note_off"] += 1
                     stack.pop(i)
                 else:
                     i += 1
@@ -368,7 +386,8 @@ class Engine:
                     except Exception:
                         continue
 
-            # Merge base + lfo offset, clamp, and send if changed
+            # Merge base + lfo offset, clamp
+            merged: List[Tuple[int, int]] = []
             all_controls = set(base_values.keys()) | set(lfo_offsets.keys())
             for ctrl in sorted(all_controls):
                 base = base_values.get(ctrl, 64)
@@ -390,10 +409,37 @@ class Engine:
                 except Exception:
                     pass
                 value = max(0, min(127, int(lfo_offset_baseline + base + off)))
+                merged.append((int(ctrl), value))
+
+            # Apply simple CC rate guards: per-track and global limits per tick
+            # Prefer to send earlier controls first; shed extras and count them
+            sent_this_tick_global = 0
+            for tkey in list(self._cc_sent_tick.keys()) if hasattr(self, "_cc_sent_tick") else []:
+                pass
+            # Count CCs already sent this tick globally (reset at new tick)
+            if not hasattr(self, "_last_cc_tick") or self._last_cc_tick != tick:
+                self._last_cc_tick = tick
+                self._cc_sent_tick_global = 0
+                self._cc_sent_tick_per_track: Dict[int, int] = {}
+
+            for ctrl, value in merged:
+                # Check per-track limit
+                per_track = self._cc_sent_tick_per_track.get(ch, 0)
+                if per_track >= self.cc_limit_per_tick_track or self._cc_sent_tick_global >= self.cc_limit_per_tick_global:
+                    self.metrics["shed_cc"] += 1
+                    continue
                 key = (ch, int(ctrl))
-                if self._last_cc.get(key) != value:
+                if self._last_cc.get(key) == value:
+                    # unchanged; skip without counting toward limit
+                    continue
+                # Send CC
+                try:
+                    self.sink.control_change(ch, int(ctrl), value)
+                    self.metrics["msgs_cc"] += 1
                     self._last_cc[key] = value
-                    try:
-                        self.sink.control_change(ch, int(ctrl), value)
-                    except Exception:
-                        pass
+                    # increment counters
+                    self._cc_sent_tick_global += 1
+                    self._cc_sent_tick_per_track[ch] = per_track + 1
+                except Exception:
+                    # treat as shed if send fails
+                    self.metrics["shed_cc"] += 1
