@@ -39,6 +39,10 @@ class MidoSink(CoreSink):
 
         # Send All Notes Off across all channels
         for ch in range(16):
+            # Sustain off
+            self.out.send(mido.Message("control_change", control=64, value=0, channel=ch))
+            # All Sound Off (120) then All Notes Off (123)
+            self.out.send(mido.Message("control_change", control=120, value=0, channel=ch))
             self.out.send(mido.Message("control_change", control=123, value=0, channel=ch))
 
     def control_change(self, channel: int, control: int, value: int) -> None:
