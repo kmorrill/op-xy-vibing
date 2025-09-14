@@ -163,6 +163,11 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 ```
 
 ## Progress Log
+- [2025-09-14T00:00:00Z] M3a – CC/LFO Runtime + External Transport (slice)
+  - Completed: CC lanes + triangle LFO merge with clamp; name→CC map aligned to OP‑XY spec; channel‑0 real‑device fixture and Make targets; external clock ratio + SPP reposition unit tests; channel mapping/unit guard.
+  - Verify: `make test` (10 tests green); device smoke `make play-cc-lfo-ch0 PORT='OP-XY' BPM=60` and confirm cutoff (CC32) ramps and resonance (CC33) wobbles; phase resets on Play/bar.
+  - Pickup: add metrics counters and jitter aggregation; external transport behavior tests for Continue vs Start; basic rate guards for CC shed; begin Conductor WS skeleton for state/doc broadcast.
+  - Context: branch `feat/m3-cc-lfo-external`, tag `ckpt-m3a`.
 - [2025-09-13T17:20:00Z] M2.5 – Local OP‑XY Player (real device)
   - Completed: Added `conductor/play_local.py` (internal/external clock), `conductor/midi_out.py` (MIDI sink via mido), `conductor/clock.py`; Makefile `play-internal` / `play-external`; `requirements.txt` (mido + python-rtmidi).
   - Verify: With OP‑XY connected, `pip install -r requirements.txt`, then `make play-internal LOOP=conductor/tests/fixtures/loop-drum-accent.json PORT='OP-XY' BPM=120` (OP‑XY should follow and play drums). For external, set OP‑XY as master and run `make play-external ...` and press Play on device.
