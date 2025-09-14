@@ -9,7 +9,7 @@ class TestExternalTransport(unittest.TestCase):
         doc = {
             "version": "opxyloop-1.0",
             "meta": {"tempo": 120, "ppq": 96, "stepsPerBar": 16},
-            "deviceProfile": {"drumMap": {"kick": 36}},
+            "deviceProfile": {"drumMap": {"kick": 53, "kick_alt": 54, "snare": 55, "snare_alt": 56, "rim": 57, "clap": 58, "tambourine": 59, "shaker": 60, "closed_hat": 61, "open_hat": 62, "pedal_hat": 63, "low_tom": 65, "crash": 66, "mid_tom": 67, "ride": 68, "high_tom": 69, "conga_low": 71, "conga_high": 72, "cowbell": 73, "guiro": 74, "metal": 75, "chi": 76}},
             "tracks": [
                 {
                     "id": "t-drums",

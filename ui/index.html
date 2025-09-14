@@ -92,39 +92,83 @@
           const right = document.createElement('span'); right.className = 'pill'; right.textContent = tr.type || 'sampler';
           h3.appendChild(left); h3.appendChild(right); div.appendChild(h3);
 
-          // Steps grid (pattern.steps)
-          const pat = tr.pattern || {}; const steps = pat.steps || []; const bars = Math.max(1, pat.lengthBars || 1);
-          const total = bars * spb;
-          const vals = Array(total).fill(0);
-          steps.forEach(st => {
-            const idx = st.idx|0; const events = st.events || [];
-            if (idx >= 0 && events.length) {
-              const v = Math.max(1, Math.min(127, events[0].velocity || 100));
-              vals[(idx % total)] = v;
-            }
-          });
-          const grid = document.createElement('div'); grid.className = 'grid';
-          grid.style.gridTemplateColumns = `repeat(${total}, 16px)`;
-          for (let i=0;i<total;i++) {
-            const c = document.createElement('div'); c.className = 'cell';
-            const v = vals[i]; if (v>0){ c.classList.add('on'); if (v>=105) c.classList.add('v-hi'); else if (v>=70) c.classList.add('v-mid'); else c.classList.add('v-low'); }
-            // Bar separators: lighten background every bar start
-            if (i % spb === 0) { c.style.outline = '1px solid #ccc'; }
-            grid.appendChild(c);
-          }
-          div.appendChild(grid);
-
-          // DrumKit patterns, if any
-          if (tr.drumKit && Array.isArray(tr.drumKit.patterns)) {
-            const byKey = {};
-            tr.drumKit.patterns.forEach(p => { const k = p.key || 'key'; (byKey[k]||(byKey[k]=[])).push(p); });
-            const pre = document.createElement('div'); pre.className='dk';
-            let text = 'drumKit patterns (per bar):\n';
-            Object.keys(byKey).sort().forEach(k => {
-              const arr = byKey[k].sort((a,b)=>(a.bar||1)-(b.bar||1));
-              arr.forEach(p => { text += `${String(k).padEnd(8)} b${p.bar||1}: ${p.pattern||''}\n`; });
+          // Steps grid (pattern.steps) — render only if steps exist and this is not a drumKit-only track
+          const pat = tr.pattern || {}; const steps = Array.isArray(pat.steps) ? pat.steps : []; const bars = Math.max(1, pat.lengthBars || 1);
+          if (steps.length > 0 && !(tr.drumKit && Array.isArray(tr.drumKit.patterns))) {
+            const total = bars * spb;
+            const vals = Array(total).fill(0);
+            steps.forEach(st => {
+              const idx = st && typeof st.idx === 'number' ? st.idx|0 : -1; const events = (st && st.events) || [];
+              if (idx >= 0 && events.length) {
+                const v = Math.max(1, Math.min(127, events[0].velocity || 100));
+                vals[(idx % total)] = v;
+              }
             });
-            pre.textContent = text; div.appendChild(pre);
+            // Only draw if at least one step is active
+            if (vals.some(x => x > 0)) {
+              const grid = document.createElement('div'); grid.className = 'grid';
+              grid.style.gridTemplateColumns = `repeat(${total}, 16px)`;
+              for (let i=0;i<total;i++) {
+                const c = document.createElement('div'); c.className = 'cell';
+                const v = vals[i]; if (v>0){ c.classList.add('on'); if (v>=105) c.classList.add('v-hi'); else if (v>=70) c.classList.add('v-mid'); else c.classList.add('v-low'); }
+                if (i % spb === 0) { c.style.outline = '1px solid #ddd'; }
+                grid.appendChild(c);
+              }
+              div.appendChild(grid);
+            }
+          }
+
+          // DrumKit patterns, if any – render as 16-step grid by hit type (rows)
+          if (tr.drumKit && Array.isArray(tr.drumKit.patterns)) {
+            const specs = tr.drumKit.patterns;
+            const normalize = (s) => String(s||'').toLowerCase();
+            const alias = (k) => ({ 'ch':'closed_hat','oh':'open_hat','hh':'closed_hat' }[k]||k);
+            // Canonical drum rows (order)
+            const rows = [
+              { id:'kick', label:'kick' }, { id:'kick_alt', label:'kick_alt' },
+              { id:'snare', label:'snare' }, { id:'snare_alt', label:'snare_alt' },
+              { id:'rim', label:'rim' }, { id:'clap', label:'clap' },
+              { id:'tambourine', label:'tamb' }, { id:'shaker', label:'shaker' },
+              { id:'closed_hat', label:'hh' }, { id:'open_hat', label:'oh' }, { id:'pedal_hat', label:'ph' },
+              { id:'low_tom', label:'lt' }, { id:'mid_tom', label:'mt' }, { id:'high_tom', label:'ht' },
+              { id:'crash', label:'crash' }, { id:'ride', label:'ride' },
+              { id:'cowbell', label:'cow' }, { id:'conga_low', label:'cl' }, { id:'conga_high', label:'ch' },
+              { id:'guiro', label:'guiro' }, { id:'metal', label:'metal' }, { id:'chi', label:'chi' },
+            ];
+            // Build map key->pattern string for current bar = 1
+            const byKey = new Map();
+            for (const s of specs) {
+              const key = alias(normalize(s.key||''));
+              const bar = s.bar||1;
+              if (!s.pattern || typeof s.pattern !== 'string') continue;
+              if (bar !== 1) continue; // first pass: show bar 1
+              byKey.set(key, String(s.pattern));
+            }
+            // Append any unknown keys as extra rows
+            for (const s of specs) {
+              const k = alias(normalize(s.key||''));
+              if (!rows.find(r=>r.id===k)) rows.push({ id:k, label:k });
+            }
+            // Container
+            const cont = document.createElement('div');
+            cont.style.marginTop = '8px';
+            // Render rows
+            rows.forEach(r => {
+              const patt = byKey.get(r.id);
+              if (!patt) return; // skip empty rows
+              const row = document.createElement('div'); row.style.display='flex'; row.style.alignItems='center'; row.style.gap='8px'; row.style.margin='2px 0';
+              const lab = document.createElement('div'); lab.textContent = r.label; lab.style.width='64px'; lab.style.textAlign='right'; lab.style.fontSize='12px'; lab.style.color='#555';
+              row.appendChild(lab);
+              const g = document.createElement('div'); g.className='grid'; g.style.gridTemplateColumns = `repeat(${spb}, 16px)`;
+              for (let i=0;i<spb;i++){
+                const c = document.createElement('div'); c.className='cell';
+                if (i < patt.length && patt[i] === 'x') c.classList.add('on','v-mid');
+                if (i % spb === 0) c.style.outline='1px solid #ddd';
+                g.appendChild(c);
+              }
+              row.appendChild(g); cont.appendChild(row);
+            });
+            div.appendChild(cont);
           }
 
           wrap.appendChild(div);

@@ -4,7 +4,7 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 
 ## Data Model Overview (MVP)
 - Single source of truth: `loop.json` on disk (git tracked).
-- Tracks: at least one drum track (GM‑safe fallback device map). Optional one pitched track in early UI. CC names resolve via the OP‑XY fixed CC map.
+- Tracks: at least one drum track (OP‑XY drum map default). Optional one pitched track in early UI. CC names resolve via the OP‑XY fixed CC map.
 - CC lanes: base value per time; LFO: bipolar offset; merge = base + offset, clamped 0–127.
 - LFO phase: reset on Play and bar boundary by default; free‑run is future work.
 - Meta: tempo, length, docVersion, device profile. No seek/catch‑up in MVP.
@@ -162,14 +162,14 @@ Policy:
 - Outbound: `state{transport,clockSource,bpm,barBeatTick}`, `doc{docVersion,json}`, `error{code,message,details}`, `metrics{msgPerSec,jitterMsP95,dropped,clockSrc}`.
 
 ## Schema Integration Tasks & Canonicalization
-- Author/align JSON Schema and examples per spec; define drum device profile map with GM fallback.
+- Author/align JSON Schema and examples per spec; define OP‑XY drum map default in examples.
 - Define and document OP‑XY CC name map (e.g., `cutoff`→32, `resonance`→33, etc.) and keep runtime mapping in sync with docs.
 
 ### Real Device Channels
 - OP‑XY “Track 1” listens on MIDI channel 0 (zero‑based). Track 2 → channel 1, …, Track 16 → channel 15.
 - Use `midiChannel` per track accordingly when targeting specific tracks. Examples:
   - Track 1: `"midiChannel": 0` (common for synth/voiced tracks)
-  - GM drums example: `"midiChannel": 9` (channel 10 one‑based) — use only when you intend to hit a drum engine listening there.
+  - Drums on Track 1: `"midiChannel": 0`. Use channel 9 (10 one‑based) only if targeting a GM-style drum engine.
 - Symptoms of wrong channel: device UI params don’t move; sound doesn’t react to CC. Fix by aligning `midiChannel` with the intended OP‑XY track.
 
 ### Developer Tips
@@ -240,7 +240,7 @@ Policy:
   - Pickup: Add CC/LFO runtime merge+clamp with phase reset and basic metrics broadcast; then external transport tests and SPP reposition assertions.
   - Context: Branch `feat/m2-local-play`; PR #4.
 - [2025-09-13T17:05:00Z] M3 groundwork – DrumKit scheduling + tests
-  - Completed: Engine schedules `drumKit` hits at step boundaries with `repeatBars`; GM fallback for `drumMap`; tests cover single-bar counts, repeats, and coexistence with `pattern.steps`.
+  - Completed: Engine schedules `drumKit` hits at step boundaries with `repeatBars`; OP‑XY defaults for `drumMap`; tests cover single-bar counts, repeats, and coexistence with `pattern.steps`.
   - Verify: `make test` (6 tests green).
   - Pickup: Extract `conductor/clock.py` with internal/external sources and a tick bus; add transport tests (Start/Stop/Continue, SPP reposition). Then wire Conductor JSON Patch gate and atomic writes.
   - Context: Branch `feat/m2-drumkit-and-tests`; PR #3.

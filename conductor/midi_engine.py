@@ -119,12 +119,41 @@ class Engine:
         spb = int(meta.get("stepsPerBar", 16))
         bar_ticks = self.step_ticks * spb
         dev = self.doc.get("deviceProfile", {})
-        drum_map = {}
+        # OP-XY default mapping (lowercase keys)
+        default_drum_map = {
+            "kick": 53,
+            "kick_alt": 54,
+            "snare": 55,
+            "snare_alt": 56,
+            "rim": 57,
+            "clap": 58,
+            "tambourine": 59,
+            "shaker": 60,
+            "closed_hat": 61,
+            "open_hat": 62,
+            "pedal_hat": 63,
+            "low_tom": 65,
+            "crash": 66,
+            "mid_tom": 67,
+            "ride": 68,
+            "high_tom": 69,
+            "conga_low": 71,
+            "conga_high": 72,
+            "cowbell": 73,
+            "guiro": 74,
+            "metal": 75,
+            "chi": 76,
+        }
+        # Start with defaults, then overlay any device-specific overrides
+        drum_map = dict(default_drum_map)
         if isinstance(dev, dict) and isinstance(dev.get("drumMap"), dict):
-            drum_map = {k: int(v) for k, v in dev["drumMap"].items() if isinstance(k, str)}
-        # GM-safe fallback
-        if not drum_map:
-            drum_map = {"kick": 36, "snare": 38, "clap": 39, "ch": 42, "oh": 46}
+            for k, v in dev["drumMap"].items():
+                if not isinstance(k, str):
+                    continue
+                try:
+                    drum_map[k.strip().lower()] = int(v)
+                except Exception:
+                    continue
         for tr in tracks:
             ch = int(tr.get("midiChannel", 0))
             pat = tr.get("pattern", {})
@@ -177,10 +206,20 @@ class Engine:
                 # Only schedule on exact step boundaries
                 if self.step_ticks == 0 or (tick % self.step_ticks) != 0:
                     return
+                # alias map to allow short keys in patterns
+                alias = {
+                    "ch": "closed_hat",
+                    "oh": "open_hat",
+                    "hh": "closed_hat",
+                    "lt": "low_tom",
+                    "mt": "mid_tom",
+                    "ht": "high_tom",
+                }
                 for spec in patterns:
                     try:
                         b0 = int(spec.get("bar", 1))
-                        key = str(spec.get("key"))
+                        key = str(spec.get("key")).lower()
+                        key = alias.get(key, key)
                         pattern_str = str(spec.get("pattern"))
                     except Exception:
                         continue
