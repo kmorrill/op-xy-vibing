@@ -15,6 +15,9 @@ class CoreSink:
     def panic(self) -> None:  # pragma: no cover - interface
         raise NotImplementedError
 
+    def control_change(self, channel: int, control: int, value: int) -> None:  # pragma: no cover - interface
+        raise NotImplementedError
+
 
 class MidoSink(CoreSink):
     def __init__(self, out_port, also_send_clock: bool = False):
@@ -37,6 +40,11 @@ class MidoSink(CoreSink):
         # Send All Notes Off across all channels
         for ch in range(16):
             self.out.send(mido.Message("control_change", control=123, value=0, channel=ch))
+
+    def control_change(self, channel: int, control: int, value: int) -> None:
+        import mido
+
+        self.out.send(mido.Message("control_change", control=int(control), value=int(max(0, min(127, value))), channel=int(channel)))
 
 
 def open_mido_output(name_filter: Optional[str] = None):
@@ -67,4 +75,3 @@ def open_mido_input(name_filter: Optional[str] = None, callback=None):
     if not names:
         raise RuntimeError("No MIDI input ports available")
     return mido.open_input(names[0], callback=callback)
-

@@ -35,3 +35,7 @@ play-internal:
 
 play-external:
 	@$(PY) -m conductor.play_local $(LOOP) --mode external --port "$(PORT)"
+
+.PHONY: play-cc-lfo-internal
+play-cc-lfo-internal:
+	@$(PY) -m conductor.play_local conductor/tests/fixtures/loop-cc-lfo.json --mode internal --bpm $(BPM) --port "$(PORT)"

@@ -32,6 +32,9 @@ class VirtualSink:
     def panic(self) -> None:
         self.events.append(("panic", -1, -1, 0))
 
+    def control_change(self, channel: int, control: int, value: int) -> None:
+        self.events.append(("cc", channel, control, max(0, min(127, int(value)))))
+
 
 class Engine:
     """Real-time scheduling engine (no look-ahead).
@@ -52,6 +55,10 @@ class Engine:
         # Active notes ledger: (ch,pitch) -> stack of NoteEvent
         self.active: Dict[Tuple[int, int], List[NoteEvent]] = {}
         self._next_note_id: int = 1
+        # CC state: last sent value per (channel, control)
+        self._last_cc: Dict[Tuple[int, int], int] = {}
+        # LFO phase resets on start and bar boundary (tracked via step counter)
+        self._started: bool = False
 
     # --- Public control ---
     def load(self, doc: Dict[str, Any]) -> None:
@@ -68,6 +75,7 @@ class Engine:
 
     def start(self) -> None:
         self.playing = True
+        self._started = True
 
     def stop(self) -> None:
         # Emit All Notes Off across channels and clear ledger
@@ -84,6 +92,8 @@ class Engine:
             return
         # Then: emit Note Ons due exactly at this tick
         self._emit_due_ons(tick)
+        # CC/LFO updates on step boundaries
+        self._emit_cc_updates(tick)
 
     # --- Internals ---
     def _emit_due_ons(self, tick: int) -> None:
@@ -205,3 +215,140 @@ class Engine:
                 stack.pop()
         self.active.clear()
         self.sink.panic()
+
+    def _emit_cc_updates(self, tick: int) -> None:
+        doc = self.doc
+        if not doc or self.step_ticks <= 0:
+            return
+        meta = doc.get("meta", {})
+        spb = int(meta.get("stepsPerBar", 16))
+        bar_ticks = self.step_ticks * spb
+        # Only compute on exact step boundaries
+        if (tick % max(1, self.step_ticks)) != 0:
+            return
+        # Compute step position
+        step_in_bar = (tick % bar_ticks) // self.step_ticks if bar_ticks > 0 else 0
+        # Reset LFO phase on bar boundary or on fresh start
+        if step_in_bar == 0 and self._started:
+            # phase implied by step_in_bar, nothing to store; just clear the started flag
+            self._started = False
+        # Default name->CC fallback map (GM-style synth params)
+        name_cc = {"cutoff": 74, "resonance": 71}
+        tracks = doc.get("tracks", [])
+        # Determine each track's pattern loop length in bars
+        for tr in tracks:
+            ch = int(tr.get("midiChannel", 0))
+            pat = tr.get("pattern", {})
+            length_bars = max(1, int(pat.get("lengthBars", 1)))
+            # Base values from ccLanes (simple linear ramp between points within current bar)
+            base_values: Dict[int, int] = {}
+            cc_lanes = tr.get("ccLanes") or []
+            if isinstance(cc_lanes, list):
+                for lane in cc_lanes:
+                    try:
+                        dest = str(lane.get("dest", ""))
+                        control = None
+                        if dest.startswith("cc:"):
+                            control = int(dest.split(":", 1)[1])
+                        elif dest.startswith("name:"):
+                            control = name_cc.get(dest.split(":", 1)[1])
+                        if control is None:
+                            continue
+                        pts = lane.get("points") or []
+                        # Gather points for bar 0 only (MVP). Interpolate across steps of current bar.
+                        # Fallback: if no points, skip.
+                        if not isinstance(pts, list) or len(pts) == 0:
+                            continue
+                        # Find two bounding points for current step
+                        # Points format: {"t": {"bar": 0, "step": s}, "v": value}
+                        s = step_in_bar
+                        left_v = None
+                        right_v = None
+                        left_s = None
+                        right_s = None
+                        for p in pts:
+                            t = p.get("t", {})
+                            if int(t.get("bar", 0)) != ((tick // bar_ticks) % length_bars if bar_ticks > 0 else 0):
+                                continue
+                            ps = int(t.get("step", 0))
+                            pv = int(p.get("v", 0))
+                            if ps <= s and (left_s is None or ps >= left_s):
+                                left_s, left_v = ps, pv
+                            if ps >= s and (right_s is None or ps <= right_s):
+                                right_s, right_v = ps, pv
+                        if left_v is None and right_v is None:
+                            continue
+                        if left_v is None:
+                            base = right_v
+                        elif right_v is None or right_s == left_s:
+                            base = left_v
+                        else:
+                            # Linear interpolation between left and right steps
+                            frac = (s - left_s) / max(1, (right_s - left_s))
+                            base = int(round(left_v + frac * (right_v - left_v)))
+                        base_values[int(control)] = max(0, min(127, int(base)))
+                    except Exception:
+                        continue
+
+            # LFO offsets (triangle only; rate sync values like '1/8' supported minimally)
+            lfos = tr.get("lfos") or []
+            lfo_offsets: Dict[int, int] = {}
+            if isinstance(lfos, list):
+                for lf in lfos:
+                    try:
+                        dest = str(lf.get("dest", ""))
+                        control = None
+                        if dest.startswith("cc:"):
+                            control = int(dest.split(":", 1)[1])
+                        elif dest.startswith("name:"):
+                            control = name_cc.get(dest.split(":", 1)[1])
+                        if control is None:
+                            continue
+                        depth = int(lf.get("depth", 0))
+                        rate = lf.get("rate", {}) or {}
+                        sync = rate.get("sync") if isinstance(rate, dict) else None
+                        shape = str(lf.get("shape", "triangle"))
+                        # Only triangle supported in MVP
+                        if shape != "triangle":
+                            continue
+                        # Compute steps per cycle from sync string like '1/8'
+                        steps_per_cycle = 0
+                        if isinstance(sync, str) and "/" in sync:
+                            # In 16 steps per bar, note length n/d => steps_per_cycle = (spb * 4/d) ?
+                            # Minimal approach: 1/8 => 2 steps, 1/4 => 4 steps, 1/2 => 8, 1/1 => 16
+                            try:
+                                denom = int(sync.split("/", 1)[1])
+                                if denom > 0:
+                                    steps_per_cycle = max(1, int(16 / (16 / denom)))  # simplifies to denom? use mapping
+                            except Exception:
+                                steps_per_cycle = 2
+                        if steps_per_cycle <= 0:
+                            # Default to 1/8
+                            steps_per_cycle = 2
+                        # Triangle from -depth..+depth. Phase resets each bar so use step_in_bar
+                        phase = step_in_bar % steps_per_cycle
+                        half = steps_per_cycle / 2.0
+                        if phase < half:
+                            # rising from -1 to +1 across first half
+                            norm = (phase / half) * 2 - 1
+                        else:
+                            # falling from +1 to -1 across second half
+                            norm = ((steps_per_cycle - phase) / half) * 2 - 1
+                        lfo = int(round(norm * depth))
+                        lfo_offsets[int(control)] = lfo
+                    except Exception:
+                        continue
+
+            # Merge base + lfo offset, clamp, and send if changed
+            all_controls = set(base_values.keys()) | set(lfo_offsets.keys())
+            for ctrl in sorted(all_controls):
+                base = base_values.get(ctrl, 64)
+                off = lfo_offsets.get(ctrl, 0)
+                value = max(0, min(127, int(base + off)))
+                key = (ch, int(ctrl))
+                if self._last_cc.get(key) != value:
+                    self._last_cc[key] = value
+                    try:
+                        self.sink.control_change(ch, int(ctrl), value)
+                    except Exception:
+                        pass
