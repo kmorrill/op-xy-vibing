@@ -12,10 +12,11 @@ from typing import Any, Dict, Optional, Set
 
 from conductor.clock import InternalClock
 from conductor.midi_engine import Engine
-from conductor.midi_out import MidoSink, open_mido_output
+from conductor.midi_out import MidoSink, open_mido_output, open_mido_input
 from conductor.validator import validate_loop, canonicalize
 from conductor.ws_server import start_ws_server
 from conductor.patch_utils import apply_patch as apply_json_patch
+from conductor.tempo_map import bpm_to_cc80
 
 
 def _atomic_write_json(path: str, obj: Dict[str, Any]) -> None:
@@ -39,16 +40,22 @@ def _load_json(path: str) -> Dict[str, Any]:
 
 
 class Conductor:
-    def __init__(self, loop_path: str, port_filter: Optional[str], bpm: float):
+    def __init__(self, loop_path: str, port_filter: Optional[str], bpm: float, clock_source: str = "internal"):
         self.loop_path = loop_path
         self.doc: Dict[str, Any] = _load_json(loop_path)
         self.doc_version = int(self.doc.get("docVersion", 0))
+        self._port_filter = port_filter
         self.out = open_mido_output(port_filter)
-        self.sink = MidoSink(self.out, also_send_clock=True)
+        self.clock_source = clock_source if clock_source in ("internal", "external") else "internal"
+        self.sink = MidoSink(self.out, also_send_clock=(self.clock_source == "internal"))
         self.engine = Engine(self.sink)
         self.engine.load(self.doc)
         self.playing = False
         self._lock = threading.Lock()
+        # External BPM estimation (when clock_source == 'external')
+        self._ext_last_ts: Optional[float] = None
+        self._ext_interval_ema: Optional[float] = None
+        self._ext_bpm: float = float(self.doc.get("meta", {}).get("tempo", 120))
 
         def on_clock_pulse(_):
             # Adapt 24 PPQN -> meta.ppq
@@ -70,8 +77,42 @@ class Conductor:
 
         # Pending structural doc replace (apply at next bar boundary)
         self._pending_doc: Optional[Dict[str, Any]] = None
-        self.clock = InternalClock(bpm=bpm, tick_handler=on_clock_pulse, send_midi_clock=send_midi_clock)
-        self.clock.start()
+        self.clock: Optional[InternalClock] = None
+        self.inp = None
+        if self.clock_source == "internal":
+            self.clock = InternalClock(bpm=bpm, tick_handler=on_clock_pulse, send_midi_clock=send_midi_clock)
+            self.clock.start()
+        else:
+            # External clock: listen for transport + MIDI clock on input
+            def on_input(msg):
+                try:
+                    if msg.type == "start":
+                        self.do_play()
+                    elif msg.type == "continue":
+                        self.do_continue()
+                    elif msg.type == "stop":
+                        self.do_stop()
+                    elif msg.type == "songpos":
+                        meta = self.doc.get("meta", {})
+                        ppq = int(meta.get("ppq", 96))
+                        self.engine.tick = int(msg.pos * (ppq / 4))
+                    elif msg.type == "clock":
+                        now = time.time()
+                        if self._ext_last_ts is not None:
+                            dt = max(1e-6, now - self._ext_last_ts)
+                            # EMA for clock pulse interval
+                            self._ext_interval_ema = dt if self._ext_interval_ema is None else (0.85 * self._ext_interval_ema + 0.15 * dt)
+                            self._ext_bpm = float(60.0 / (max(1e-6, self._ext_interval_ema) * 24.0))
+                        self._ext_last_ts = now
+                        meta = self.doc.get("meta", {})
+                        ppq = int(meta.get("ppq", 96))
+                        ratio = max(1, ppq // 24)
+                        for _ in range(ratio):
+                            self.engine.on_tick(self.engine.tick + 1)
+                            self._maybe_apply_pending()
+                except Exception:
+                    pass
+            self.inp = open_mido_input(port_filter, callback=on_input)
 
     # --- State/doc ---
     def get_state(self) -> Dict[str, Any]:
@@ -91,8 +132,9 @@ class Conductor:
             beat = (tick_in_bar // max(1, ppq)) % 4
             return {
                 "transport": "playing" if self.playing else "stopped",
-                "bpm": self.clock.bpm,
+                "bpm": (self.clock.bpm if self.clock_source == "internal" and self.clock else self._ext_bpm),
                 "tick": t,
+                "clockSource": self.clock_source,
                 "barBeatTick": {
                     "beat": int(beat),
                     "tickInBar": int(tick_in_bar),
@@ -138,7 +180,93 @@ class Conductor:
                     pass
 
     def do_set_tempo(self, bpm: float) -> None:
-        self.clock.set_bpm(bpm)
+        if self.clock and self.clock_source == "internal":
+            self.clock.set_bpm(bpm)
+
+    def do_set_tempo_cc(self, bpm: float) -> None:
+        """Set device tempo via CC80 on channel 0 using a 40..220 BPM scale.
+
+        Mapping: 0..127 -> 40..220 BPM. Clamped. Does not change clock source.
+        """
+        try:
+            import mido
+            # Scale bpm to 0..127
+            val = bpm_to_cc80(float(bpm))
+            # Send on channel 0
+            self.out.send(mido.Message("control_change", control=80, value=val, channel=0))
+            # Nudge external BPM estimator toward requested value for UI continuity
+            self._ext_bpm = float(max(40.0, min(220.0, float(bpm))))
+        except Exception:
+            pass
+
+    def do_set_clock_source(self, source: str) -> None:
+        source = source if source in ("internal", "external") else self.clock_source
+        if source == self.clock_source:
+            return
+        # Tear down existing clock/input
+        if self.clock:
+            try:
+                self.clock.stop()
+            except Exception:
+                pass
+            self.clock = None
+        if self.inp:
+            try:
+                self.inp.close()
+            except Exception:
+                pass
+            self.inp = None
+        self.clock_source = source
+        # Update sink for MIDI clock sending behavior
+        self.sink.also_send_clock = (self.clock_source == "internal")
+        # Recreate clock or input
+        if self.clock_source == "internal":
+            def on_clock_pulse(_):
+                meta = self.doc.get("meta", {})
+                ppq = int(meta.get("ppq", 96))
+                ratio = max(1, ppq // 24)
+                for _ in range(ratio):
+                    self.engine.on_tick(self.engine.tick + 1)
+                    self._maybe_apply_pending()
+            def send_midi_clock():
+                import mido
+                try:
+                    self.out.send(mido.Message("clock"))
+                except Exception:
+                    pass
+            self.clock = InternalClock(bpm=float(self.doc.get("meta",{}).get("tempo", 120)), tick_handler=on_clock_pulse, send_midi_clock=send_midi_clock)
+            self.clock.start()
+            self._ext_last_ts = None; self._ext_interval_ema = None
+        else:
+            def on_input(msg):
+                try:
+                    if msg.type == "start":
+                        self.do_play()
+                    elif msg.type == "continue":
+                        self.do_continue()
+                    elif msg.type == "stop":
+                        self.do_stop()
+                    elif msg.type == "songpos":
+                        meta = self.doc.get("meta", {})
+                        ppq = int(meta.get("ppq", 96))
+                        self.engine.tick = int(msg.pos * (ppq / 4))
+                    elif msg.type == "clock":
+                        now = time.time()
+                        if self._ext_last_ts is not None:
+                            dt = max(1e-6, now - self._ext_last_ts)
+                            self._ext_interval_ema = dt if self._ext_interval_ema is None else (0.85 * self._ext_interval_ema + 0.15 * dt)
+                            self._ext_bpm = float(60.0 / (max(1e-6, self._ext_interval_ema) * 24.0))
+                        self._ext_last_ts = now
+                        meta = self.doc.get("meta", {})
+                        ppq = int(meta.get("ppq", 96))
+                        ratio = max(1, ppq // 24)
+                        for _ in range(ratio):
+                            self.engine.on_tick(self.engine.tick + 1)
+                            self._maybe_apply_pending()
+                except Exception:
+                    pass
+            self._ext_last_ts = None; self._ext_interval_ema = None
+            self.inp = open_mido_input(self._port_filter, callback=on_input)
 
     def do_replace_json(self, base_version: int, new_doc: Dict[str, Any]) -> Dict[str, Any]:
         with self._lock:
@@ -155,7 +283,7 @@ class Conductor:
             self.doc = canon
             self.engine.replace_doc(self.doc)
             return {"ok": True, "docVersion": self.doc_version}
-
+        
     # --- Apply scheduling helpers ---
     def _is_structural_ops(self, ops: list) -> bool:
         structural_prefixes = ("/meta/", "/deviceProfile")
@@ -222,16 +350,22 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
 
     async def metrics_task():
         while True:
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.5)
+            # Broadcast metrics (tolerate missing internal clock)
             try:
+                clock_metrics = conductor.clock.get_metrics() if getattr(conductor, 'clock', None) else {"externalBpm": getattr(conductor, '_ext_bpm', None)}
                 await broadcast({
                     "type": "metrics",
                     "ts": time.time(),
                     "payload": {
                         "engine": conductor.engine.get_metrics(),
-                        "clock": conductor.clock.get_metrics(),
+                        "clock": clock_metrics,
                     },
                 })
+            except Exception:
+                pass
+            # Broadcast state separately so a metrics error doesn't block state updates
+            try:
                 await broadcast({"type": "state", "ts": time.time(), "payload": conductor.get_state()})
             except Exception:
                 pass
@@ -257,6 +391,15 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
                 elif t == "setTempo":
                     bpm = float(obj.get("bpm", conductor.clock.bpm))
                     conductor.do_set_tempo(bpm)
+                elif t == "setClockSource":
+                    src = obj.get("source", "internal")
+                    conductor.do_set_clock_source(str(src))
+                elif t == "setTempoCC":
+                    bpm = float(obj.get("bpm", 0))
+                    conductor.do_set_tempo_cc(bpm)
+                elif t == "getState":
+                    # Explicit poll for current state (UI fallback)
+                    await ws.send(json.dumps({"type": "state", "ts": time.time(), "payload": conductor.get_state()}))
                 elif t == "replaceJSON":
                     payload = obj.get("payload", {})
                     base = int(payload.get("baseVersion", -1))
@@ -291,8 +434,9 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
                                         await ws.send(json.dumps({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()}))
                                     else:
                                         await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": res}))
-                # broadcast updated state after commands
-                await ws.send(json.dumps({"type": "state", "ts": time.time(), "payload": conductor.get_state()}))
+                # broadcast updated state after commands (except explicit getState which already responded)
+                if t != "getState":
+                    await ws.send(json.dumps({"type": "state", "ts": time.time(), "payload": conductor.get_state()}))
         finally:
             clients.discard(ws)
 
@@ -310,11 +454,12 @@ def main():
     ap.add_argument("--loop", default="loop.json")
     ap.add_argument("--port", help="Substring to match MIDI port (e.g., 'OP-XY')")
     ap.add_argument("--bpm", type=float, default=120.0)
+    ap.add_argument("--clock-source", choices=["internal","external"], default="internal")
     ap.add_argument("--ws-host", default="127.0.0.1")
     ap.add_argument("--ws-port", type=int, default=8765)
     args = ap.parse_args()
 
-    conductor = Conductor(args.loop, args.port, args.bpm)
+    conductor = Conductor(args.loop, args.port, args.bpm, clock_source=args.clock_source)
 
     def shutdown(*_):
         try:

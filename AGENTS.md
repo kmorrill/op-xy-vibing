@@ -266,3 +266,10 @@ Policy:
 - Always include `Verify:` commands in Progress Log entries and record the pass result (e.g., `make test`, specialized harness checks).
 - If a test is flaky, treat it as failing; reduce flakiness (tolerances, fake time) or fix root cause before marking done.
 - For runtime changes, include a minimal demo command (e.g., `make demo-note`) that proves behavior alongside unit tests.
+-### External Clock + Tempo Control
+- Device is tempo master by default. Conductor listens to MIDI Start/Stop/Continue/SPP/Clock; UI displays BPM derived from external pulses.
+- UI tempo changes use CC80 on channel 0, mapped 0..127 → 40..220 BPM; no clock-source switching. This avoids jitter and preserves device control.
+- UI behavior:
+  - BPM field: auto-updates from device (not while focused).
+  - Push tempo: sends CC80 (device remains master).
+  - Play/Stop/Continue: transport only; no tempo pulses are pushed when external.
