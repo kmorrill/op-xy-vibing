@@ -58,3 +58,41 @@ class TestCCLFO(unittest.TestCase):
             self.assertGreaterEqual(val, 0)
             self.assertLessEqual(val, 127)
 
+    def test_cc_name_maps_and_channel(self):
+        # Track on MIDI channel 0 should emit CC32 when using name:cutoff
+        doc = {
+            "version": "opxyloop-1.0",
+            "meta": {"tempo": 120, "ppq": 96, "stepsPerBar": 16},
+            "tracks": [
+                {
+                    "id": "t1",
+                    "name": "Track1",
+                    "type": "sampler",
+                    "midiChannel": 0,
+                    "pattern": {"lengthBars": 1, "steps": []},
+                    "ccLanes": [
+                        {
+                            "id": "cutoff-rise",
+                            "dest": "name:cutoff",
+                            "points": [
+                                {"t": {"bar": 0, "step": 0}, "v": 40},
+                                {"t": {"bar": 0, "step": 15}, "v": 100},
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+        sink = VirtualSink()
+        eng = Engine(sink)
+        eng.load(doc)
+        eng.start()
+        step_ticks = int((96 * 4) / 16)  # 24
+        bar_ticks = step_ticks * 16      # 384
+        for t in range(0, bar_ticks + 1, step_ticks):
+            eng.on_tick(t)
+        cc_events = [e for e in sink.events if e[0] == "cc"]
+        self.assertGreater(len(cc_events), 0, "expected CC events for cutoff lane")
+        # Assert all CCs are sent on channel 0 and control 32
+        self.assertTrue(all(ch == 0 for _, ch, _ctl, _ in cc_events))
+        self.assertTrue(all(ctl == 32 for _, _ch, ctl, _ in cc_events))

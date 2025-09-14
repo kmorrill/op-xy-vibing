@@ -128,6 +128,17 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 ## Schema Integration Tasks & Canonicalization
 - Author/align JSON Schema and examples per spec; define drum device profile map with GM fallback.
 - Define and document OP‑XY CC name map (e.g., `cutoff`→32, `resonance`→33, etc.) and keep runtime mapping in sync with docs.
+
+### Real Device Channels
+- OP‑XY “Track 1” listens on MIDI channel 0 (zero‑based). Track 2 → channel 1, …, Track 16 → channel 15.
+- Use `midiChannel` per track accordingly when targeting specific tracks. Examples:
+  - Track 1: `"midiChannel": 0` (common for synth/voiced tracks)
+  - GM drums example: `"midiChannel": 9` (channel 10 one‑based) — use only when you intend to hit a drum engine listening there.
+- Symptoms of wrong channel: device UI params don’t move; sound doesn’t react to CC. Fix by aligning `midiChannel` with the intended OP‑XY track.
+
+### Developer Tips
+- Prefer `dest: "name:<id>"` for CC lanes/LFOs (see CC map in docs) to avoid magic numbers.
+- For real‑device smoke, ensure fixtures set `midiChannel` to the target track (e.g., `loop-cc-lfo-ch0.json` for Track 1).
 - Define canonical formatting (ordering, whitespace) and hashing policy.
 - Implement validator and canonicalizer; add fixtures under `conductor/tests/fixtures/*.json`.
 - Document velocity semantics: Accent ≥105, normal 70–100, ghost 30–55. Guardrail: max ratchet density = 8/step.
