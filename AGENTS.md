@@ -4,7 +4,7 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 
 ## Data Model Overview (MVP)
 - Single source of truth: `loop.json` on disk (git tracked).
-- Tracks: at least one drum track (GM‑safe fallback device map). Optional one pitched track in early UI.
+- Tracks: at least one drum track (GM‑safe fallback device map). Optional one pitched track in early UI. CC names resolve via the OP‑XY fixed CC map.
 - CC lanes: base value per time; LFO: bipolar offset; merge = base + offset, clamped 0–127.
 - LFO phase: reset on Play and bar boundary by default; free‑run is future work.
 - Meta: tempo, length, docVersion, device profile. No seek/catch‑up in MVP.
@@ -127,6 +127,7 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 
 ## Schema Integration Tasks & Canonicalization
 - Author/align JSON Schema and examples per spec; define drum device profile map with GM fallback.
+- Define and document OP‑XY CC name map (e.g., `cutoff`→32, `resonance`→33, etc.) and keep runtime mapping in sync with docs.
 - Define canonical formatting (ordering, whitespace) and hashing policy.
 - Implement validator and canonicalizer; add fixtures under `conductor/tests/fixtures/*.json`.
 - Document velocity semantics: Accent ≥105, normal 70–100, ghost 30–55. Guardrail: max ratchet density = 8/step.

@@ -232,8 +232,38 @@ class Engine:
         if step_in_bar == 0 and self._started:
             # phase implied by step_in_bar, nothing to store; just clear the started flag
             self._started = False
-        # Default name->CC fallback map (GM-style synth params)
-        name_cc = {"cutoff": 74, "resonance": 71}
+        # OP-XY fixed CC name map (subset; see docs)
+        name_cc = {
+            "track_volume": 7,
+            "track_mute": 9,
+            "track_pan": 10,
+            "param1": 12,
+            "param2": 13,
+            "param3": 14,
+            "param4": 15,
+            "amp_attack": 20,
+            "amp_decay": 21,
+            "amp_sustain": 22,
+            "amp_release": 23,
+            "filter_attack": 24,
+            "filter_decay": 25,
+            "filter_sustain": 26,
+            "filter_release": 27,
+            "voice_mode": 28,  # poly/mono/legato
+            "portamento": 29,
+            "pitchbend_amount": 30,
+            "engine_volume": 31,
+            "cutoff": 32,      # Filter cutoff
+            "resonance": 33,
+            "env_amount": 34,
+            "key_tracking": 35,
+            "send_ext": 36,
+            "send_tape": 37,
+            "send_fx1": 38,
+            "send_fx2": 39,
+            "lfo_dest": 40,
+            "lfo_param": 41,
+        }
         tracks = doc.get("tracks", [])
         # Determine each track's pattern loop length in bars
         for tr in tracks:
