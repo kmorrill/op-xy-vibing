@@ -137,6 +137,15 @@ Policy:
 | Observability & KPIs | Jitter distributions, dropped counts, event throughput. |
 | Runbook | Run tests with virtual MIDI; simulate external clock; assert expectations. |
 
+### Real Device Safety
+- Always stop all playing processes before starting a new real‑device test.
+- Send a MIDI panic (CC64=0, CC120=0, CC123=0) to silence the device, then kill any `conductor.conductor_server`, `conductor.play_local`, or `tools/wsctl.py` processes, and free the WS port (8765) if held.
+- Only after the above, request approval to run new device commands.
+- Example sequence (shell A):
+  - `pkill -f "conductor.conductor_server" || true && pkill -f "conductor.play_local" || true && pkill -f "tools/wsctl.py" || true`
+  - `pids=$(lsof -t -iTCP:8765 -sTCP:LISTEN 2>/dev/null || true); [ -n "$pids" ] && kill $pids || true; sleep 1; [ -n "$pids" ] && kill -9 $pids || true`
+  - `python - <<'PY'\nfrom conductor.midi_out import open_mido_output, MidoSink\nout=open_mido_output('OP-XY'); MidoSink(out).panic()\nPY`
+
 ## WebSocket Types (first cut)
 - Inbound: `play`, `stop`, `continue`, `setTempo{bpm}`, `applyPatch{baseVersion,ops[]}`, `replaceJSON{baseVersion,doc}`.
 - Outbound: `state{transport,clockSource,bpm,barBeatTick}`, `doc{docVersion,json}`, `error{code,message,details}`, `metrics{msgPerSec,jitterMsP95,dropped,clockSrc}`.
@@ -208,6 +217,11 @@ Policy:
   - Completed: Minimal Conductor (`conductor/conductor_server.py`) serving `doc/state/metrics` over WS; accepts `play/stop/continue/setTempo/replaceJSON`; atomic file writes; engine panic wired to Stop; `make conductor-run` target.
   - Verify: `make test` (12 tests green); run `make conductor-run LOOP=conductor/tests/fixtures/loop-cc-lfo-ch0.json PORT='OP-XY' BPM=60` then connect a WS client to ws://127.0.0.1:8765; send `{"type":"play"}` and observe playback and metrics; send `{"type":"stop"}` and verify no stuck notes.
   - Pickup: Add `applyPatch` (RFC 6902) gate; include `state.barBeatTick`; include SHA-256 of canonical JSON in `doc`; basic auth/hooks for UI.
+  - Context: changes on `main`.
+- [2025-09-14T01:45:00Z] M3g – Patch Gate + Scheduled Applies
+  - Completed: `applyPatch{baseVersion,ops[]}` with validation; `state.barBeatTick` and `doc.sha256`; structural edits auto-scheduled for next bar boundary by default; `applyNow` override supported; `tools/wsctl.py` for terminal WS control and Make targets (`ws-play`, `ws-stop`, `ws-patch-vel`).
+  - Verify: `make test` (13 tests green); run Conductor, `make ws-play`, then `make ws-patch-vel VEL=90 APPLYNOW=--apply-now` to hear immediate velocity change; try a structural patch (e.g., `pattern.lengthBars`) without `--apply-now` and observe it applies at next bar.
+  - Pickup: basic auth for WS, UI stub to visualize metrics/docVersion/sha and send patches; refine structural classifier; time-signature generalization for beat math.
   - Context: changes on `main`.
 - [2025-09-13T17:20:00Z] M2.5 – Local OP‑XY Player (real device)
   - Completed: Added `conductor/play_local.py` (internal/external clock), `conductor/midi_out.py` (MIDI sink via mido), `conductor/clock.py`; Makefile `play-internal` / `play-external`; `requirements.txt` (mido + python-rtmidi).

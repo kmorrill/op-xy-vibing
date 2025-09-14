@@ -51,6 +51,11 @@ def run_internal(loop_path: str, port_filter: Optional[str], bpm: float, loops: 
     # Send Start and begin
     out.send(mido.Message("start"))
     eng.start()
+    # Process tick 0 immediately so step-0 events are not missed
+    try:
+        eng.on_tick(eng.tick)
+    except Exception:
+        pass
 
     done = threading.Event()
 
@@ -124,8 +129,16 @@ def run_external(loop_path: str, port_filter: Optional[str]):
         try:
             if msg.type == "start":
                 eng.start()
+                try:
+                    eng.on_tick(eng.tick)
+                except Exception:
+                    pass
             elif msg.type == "continue":
                 eng.start()  # same as start for MVP
+                try:
+                    eng.on_tick(eng.tick)
+                except Exception:
+                    pass
             elif msg.type == "stop":
                 eng.stop()
             elif msg.type == "songpos":

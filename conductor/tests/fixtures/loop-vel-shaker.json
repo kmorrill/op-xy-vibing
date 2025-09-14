@@ -1,0 +1,23 @@
+{
+  "version": "opxyloop-1.0",
+  "meta": { "tempo": 100, "ppq": 96, "stepsPerBar": 16 },
+  "deviceProfile": { "portName": "OP-XY" },
+  "tracks": [
+    {
+      "id": "t-drums",
+      "name": "Shaker Velocity AB",
+      "type": "sampler",
+      "midiChannel": 9,
+      "pattern": {
+        "lengthBars": 1,
+        "steps": [
+          { "idx": 0,  "events": [{ "pitch": 82, "velocity": 110, "lengthSteps": 1 }] },
+          { "idx": 4,  "events": [{ "pitch": 82, "velocity": 110, "lengthSteps": 1 }] },
+          { "idx": 8,  "events": [{ "pitch": 82, "velocity": 40,  "lengthSteps": 1 }] },
+          { "idx": 12, "events": [{ "pitch": 82, "velocity": 40,  "lengthSteps": 1 }] }
+        ]
+      }
+    }
+  ]
+}
+
