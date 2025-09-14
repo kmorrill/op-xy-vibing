@@ -151,6 +151,11 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 ```
 
 ## Progress Log
+- [2025-09-13T17:20:00Z] M2.5 – Local OP‑XY Player (real device)
+  - Completed: Added `conductor/play_local.py` (internal/external clock), `conductor/midi_out.py` (MIDI sink via mido), `conductor/clock.py`; Makefile `play-internal` / `play-external`; `requirements.txt` (mido + python-rtmidi).
+  - Verify: With OP‑XY connected, `pip install -r requirements.txt`, then `make play-internal LOOP=conductor/tests/fixtures/loop-drum-accent.json PORT='OP-XY' BPM=120` (OP‑XY should follow and play drums). For external, set OP‑XY as master and run `make play-external ...` and press Play on device.
+  - Pickup: Add CC/LFO runtime merge+clamp with phase reset and basic metrics broadcast; then external transport tests and SPP reposition assertions.
+  - Context: Branch `feat/m2-local-play`; PR #4.
 - [2025-09-13T17:05:00Z] M3 groundwork – DrumKit scheduling + tests
   - Completed: Engine schedules `drumKit` hits at step boundaries with `repeatBars`; GM fallback for `drumMap`; tests cover single-bar counts, repeats, and coexistence with `pattern.steps`.
   - Verify: `make test` (6 tests green).

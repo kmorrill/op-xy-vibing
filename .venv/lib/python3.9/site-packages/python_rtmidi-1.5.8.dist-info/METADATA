@@ -1,0 +1,160 @@
+Metadata-Version: 2.1
+Name: python-rtmidi
+Version: 1.5.8
+Summary: A Python binding for the RtMidi C++ library implemented using Cython.
+Keywords: MIDI multimedia music rtmidi
+Author-Email: Christopher Arndt <info@chrisarndt.de>
+License: Copyright & License
+        ===================
+        
+        python-rtmidi was written by Christopher Arndt, 2012 - 2023.
+        
+        The software is released unter the MIT License:
+        
+        Copyright (c) 2012 - 2023 Christopher Arndt
+        
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and associated documentation files (the "Software"),
+            to deal in the Software without restriction, including without limitation
+            the rights to use, copy, modify, merge, publish, distribute, sublicense,
+            and/or sell copies of the Software, and to permit persons to whom the
+            Software is furnished to do so, subject to the following conditions:
+        
+            The above copyright notice and this permission notice shall be included
+            in all copies or substantial portions of the Software.
+        
+            THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+            OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+            FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+            AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+            LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+            FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+            DEALINGS IN THE SOFTWARE.
+        
+        
+        RtMidi is distributed under a modified MIT License:
+        
+            RtMidi: realtime MIDI i/o C++ classes
+            Copyright (c) 2003-2019 Gary P. Scavone
+        
+            Permission is hereby granted, free of charge, to any person
+            obtaining a copy of this software and associated documentation files
+            (the "Software"), to deal in the Software without restriction,
+            including without limitation the rights to use, copy, modify, merge,
+            publish, distribute, sublicense, and/or sell copies of the Software,
+            and to permit persons to whom the Software is furnished to do so,
+            subject to the following conditions:
+        
+            The above copyright notice and this permission notice shall be
+            included in all copies or substantial portions of the Software.
+        
+            Any person wishing to distribute modifications to the Software is
+            asked to send the modifications to the original developer so that
+            they can be incorporated into the canonical version.  This is,
+            however, not a binding provision of this license.
+        
+            THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+            EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+            MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+            IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR
+            ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+            CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+            WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Environment :: MacOS X
+Classifier: Environment :: Win32 (MS Windows)
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: POSIX
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Multimedia :: Sound/Audio :: MIDI
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Project-URL: Bug tracker, https://github.com/SpotlightKid/python-rtmidi/issues
+Project-URL: Documentation, https://spotlightkid.github.io/python-rtmidi/
+Project-URL: Download, https://pypi.python.org/pypi/python-rtmidi
+Project-URL: Homepage, https://github.com/SpotlightKid/python-rtmidi
+Project-URL: Source, https://gitlab.com/SpotlightKid/python-rtmidi/
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+
+# Welcome to python-rtmidi!
+
+A Python binding for the RtMidi C++ library implemented using Cython.
+
+[![Latest version](https://shields.io/pypi/v/python-rtmidi)](https://pypi.org/project/python-rtmidi)
+![Project status](https://shields.io/pypi/status/python-rtmidi)
+[![MIT License](https://shields.io/pypi/l/python-rtmidi)](LICENSE.md)
+![Python versions](https://shields.io/pypi/pyversions/python-rtmidi)
+[![Distribution format](https://shields.io/pypi/format/python-rtmidi)](https://pypi.org/project/python-rtmidi/#files)
+[![CI status](https://github.com/SpotlightKid/python-rtmidi/actions/workflows/push_to_master.yml/badge.svg)](https://github.com/SpotlightKid/python-rtmidi/actions)
+
+# Overview
+
+[RtMidi] is a set of C++ classes which provides a concise and simple,
+cross-platform API (Application Programming Interface) for realtime MIDI
+input / output across Linux (ALSA & JACK), macOS / OS X (CoreMIDI & JACK), and
+Windows (MultiMedia System) operating systems.
+
+[python-rtmidi] is a Python binding for RtMidi implemented using [Cython] and
+provides a thin wrapper around the RtMidi C++ interface. The API is basically
+the same as the C++ one but with the naming scheme of classes, methods and
+parameters adapted to the Python PEP-8 conventions and requirements of the
+Python package naming structure. **python-rtmidi** supports Python 3 (3.8+).
+
+The [documentation] provides installation instructions, a history of changes
+per release and an API reference.
+
+See the file [LICENSE.md] about copyright and usage terms.
+
+The source code repository and issue tracker are hosted on GitHub:
+
+<https://github.com/SpotlightKid/python-rtmidi>.
+
+## Usage example
+
+Here's a quick example of how to use **python-rtmidi** to open the first
+available MIDI output port and send a middle C note on MIDI channel 1:
+
+```python
+import time
+import rtmidi
+
+midiout = rtmidi.MidiOut()
+available_ports = midiout.get_ports()
+
+if available_ports:
+    midiout.open_port(0)
+else:
+    midiout.open_virtual_port("My virtual output")
+
+with midiout:
+    note_on = [0x90, 60, 112] # channel 1, middle C, velocity 112
+    note_off = [0x80, 60, 0]
+    midiout.send_message(note_on)
+    time.sleep(0.5)
+    midiout.send_message(note_off)
+    time.sleep(0.1)
+
+del midiout
+```
+
+More usage examples can be found in the [examples] and [tests] directories of
+the source repository.
+
+
+[Cython]: http://cython.org/
+[documentation]: https://spotlightkid.github.io/python-rtmidi/
+[examples]: https://github.com/SpotlightKid/python-rtmidi/tree/master/examples
+[LICENSE.md]: https://github.com/SpotlightKid/python-rtmidi/blob/master/LICENSE.md
+[python-rtmidi]: https://github.com/SpotlightKid/python-rtmidi
+[tests]: https://github.com/SpotlightKid/python-rtmidi/tree/master/tests
+[RtMidi]: http://www.music.mcgill.ca/~gary/rtmidi/index.html
