@@ -1,0 +1,78 @@
+import unittest
+
+from conductor.midi_engine import Engine, VirtualSink
+
+
+class TestExternalTransport(unittest.TestCase):
+    def test_external_clock_ratio_maps_to_engine_ticks(self):
+        # ppq=96 => ratio = 96/24 = 4 engine ticks per MIDI clock pulse
+        doc = {
+            "version": "opxyloop-1.0",
+            "meta": {"tempo": 120, "ppq": 96, "stepsPerBar": 16},
+            "deviceProfile": {"drumMap": {"kick": 36}},
+            "tracks": [
+                {
+                    "id": "t-drums",
+                    "name": "Kit",
+                    "type": "sampler",
+                    "midiChannel": 9,
+                    "pattern": {"lengthBars": 1, "steps": []},
+                    "drumKit": {
+                        "patterns": [{"bar": 1, "key": "kick", "pattern": "x...............", "vel": 120}],
+                        "repeatBars": 1,
+                        "lengthSteps": 1,
+                    },
+                }
+            ],
+        }
+        sink = VirtualSink()
+        eng = Engine(sink)
+        eng.load(doc)
+        eng.start()
+        ppq, spb = 96, 16
+        step_ticks = int((ppq * 4) / spb)  # 24
+        bar_ticks = step_ticks * spb  # 384
+        ratio = ppq // 24  # 4
+        # Simulate one bar's worth of 24PPQN pulses
+        pulses = bar_ticks // ratio  # 96
+        start_tick = eng.tick
+        for _ in range(pulses):
+            for _ in range(ratio):
+                eng.on_tick(eng.tick + 1)
+        # Expect exactly one kick note_on in the bar
+        ons = [e for e in sink.events if e[0] == "on"]
+        self.assertEqual(len(ons), 1)
+
+    def test_spp_reposition_maps_to_step_boundary(self):
+        # One step at idx 8 should fire when engine.tick is set to that step's tick
+        doc = {
+            "version": "opxyloop-1.0",
+            "meta": {"tempo": 120, "ppq": 96, "stepsPerBar": 16},
+            "tracks": [
+                {
+                    "id": "t1",
+                    "name": "Synth",
+                    "type": "sampler",
+                    "midiChannel": 0,
+                    "pattern": {
+                        "lengthBars": 1,
+                        "steps": [
+                            {"idx": 8, "events": [{"pitch": 60, "velocity": 100, "lengthSteps": 1}]}
+                        ],
+                    },
+                }
+            ],
+        }
+        sink = VirtualSink()
+        eng = Engine(sink)
+        eng.load(doc)
+        spb = 16
+        step_ticks = int((96 * 4) / spb)  # 24
+        # MIDI SPP pos is in 1/16 notes; mapping sets eng.tick = pos * (ppq/4)
+        # For pos=8, that's 8 * 24 = 192
+        eng.tick = 8 * (96 // 4)
+        eng.start()
+        eng.on_tick(eng.tick)
+        ons = [e for e in sink.events if e[0] == "on"]
+        self.assertEqual(len(ons), 1)
+

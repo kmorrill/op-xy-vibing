@@ -250,6 +250,26 @@ If multiple specs produce hits at the same `idx` (e.g., kick and clap together),
 
 Use **ccLanes** to schedule CC automation over time (e.g., filter cutoff, resonance, sends). Destination names must match the OP‑XY’s fixed CC mapping known by the runtime.
 
+### 6.2 OP‑XY CC Name Map (canonical)
+
+For `dest: "name:<identifier>"`, the runtime resolves names to these controller numbers:
+
+- name: `track_volume` → CC 7
+- name: `track_mute` → CC 9
+- name: `track_pan` → CC 10
+- name: `param1` → CC 12; `param2` → 13; `param3` → 14; `param4` → 15
+- name: `amp_attack` → CC 20; `amp_decay` → 21; `amp_sustain` → 22; `amp_release` → 23
+- name: `filter_attack` → CC 24; `filter_decay` → 25; `filter_sustain` → 26; `filter_release` → 27
+- name: `voice_mode` → CC 28 (poly/mono/legato)
+- name: `portamento` → CC 29
+- name: `pitchbend_amount` → CC 30
+- name: `engine_volume` → CC 31
+- name: `cutoff` → CC 32; name: `resonance` → CC 33; name: `env_amount` → CC 34; name: `key_tracking` → CC 35
+- name: `send_ext` → CC 36; name: `send_tape` → 37; name: `send_fx1` → 38; name: `send_fx2` → 39
+- name: `lfo_dest` → CC 40; name: `lfo_param` → CC 41
+
+If you prefer explicit controller numbers in JSON, use `dest: "cc:<number>"` or an integer.
+
 ### 6.1 CCLane object
 
 | Key | Type | Required | Description |
@@ -294,7 +314,7 @@ Runtime‑generated periodic modulation (distinct from explicit CC points).
 - **Sparse steps:** Omit silent indices in `steps`; the array is intentionally sparse.  
 - **Probability & ratchets:** If both are present, probability applies to the entire ratcheted group.  
 - **Tonal context:** When using degrees or relative chord numerals, set `meta.key` and `meta.mode` so the runtime can resolve to MIDI pitches. Absolute pitches/symbols require no tonal context.  
-- **Fixed CC mapping:** Destination names (e.g., `name:cutoff`) are resolved by the runtime against the OP‑XY’s fixed CC map; do **not** embed a `ccMap` in JSON.  
+- **Fixed CC mapping:** Destination names (e.g., `name:cutoff`) are resolved by the runtime against the OP‑XY’s fixed CC map (see §6.2); do **not** embed a `ccMap` in JSON.  
 - **No time‑signature changes:** This schema doesn’t encode time‑signature changes; the OP‑XY handles its own meter.
 
 ---

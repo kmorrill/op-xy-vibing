@@ -4,7 +4,7 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 
 ## Data Model Overview (MVP)
 - Single source of truth: `loop.json` on disk (git tracked).
-- Tracks: at least one drum track (GM‑safe fallback device map). Optional one pitched track in early UI.
+- Tracks: at least one drum track (GM‑safe fallback device map). Optional one pitched track in early UI. CC names resolve via the OP‑XY fixed CC map.
 - CC lanes: base value per time; LFO: bipolar offset; merge = base + offset, clamped 0–127.
 - LFO phase: reset on Play and bar boundary by default; free‑run is future work.
 - Meta: tempo, length, docVersion, device profile. No seek/catch‑up in MVP.
@@ -107,6 +107,22 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 | Observability & KPIs | Time since last commit, commit size, rollback success. |
 | Runbook | Ensure repo initialized; configure author; verify `.gitignore`; review diffs; checkpoint before risky edits. |
 
+## PR Workflow (GitHub CLI)
+
+- Work via Pull Requests, not direct pushes to `main`.
+- Use GitHub CLI (`gh`) to open, review, and merge PRs from the terminal.
+- Typical flow:
+  - `git checkout -b feat/<short-scope>` and implement changes
+  - `git push -u origin HEAD`
+  - `gh pr create --base main --head <branch> --title "<title>" --body "<summary + Verify: steps>"`
+  - `gh pr list -s open` and `gh pr view <PR#> --web` (or `--comments`)
+  - `gh pr merge <PR#> --merge --delete-branch` (use `--squash`/`--rebase` per policy)
+  - `git checkout main && git pull --ff-only`
+
+Policy:
+- Keep PRs small and vertical with explicit Verify steps and expected outcomes.
+- Do not merge with failing CI; adjust tests or tolerances only with justification.
+
 ## Test Harness Agent
 
 | Area | Details |
@@ -127,6 +143,18 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 
 ## Schema Integration Tasks & Canonicalization
 - Author/align JSON Schema and examples per spec; define drum device profile map with GM fallback.
+- Define and document OP‑XY CC name map (e.g., `cutoff`→32, `resonance`→33, etc.) and keep runtime mapping in sync with docs.
+
+### Real Device Channels
+- OP‑XY “Track 1” listens on MIDI channel 0 (zero‑based). Track 2 → channel 1, …, Track 16 → channel 15.
+- Use `midiChannel` per track accordingly when targeting specific tracks. Examples:
+  - Track 1: `"midiChannel": 0` (common for synth/voiced tracks)
+  - GM drums example: `"midiChannel": 9` (channel 10 one‑based) — use only when you intend to hit a drum engine listening there.
+- Symptoms of wrong channel: device UI params don’t move; sound doesn’t react to CC. Fix by aligning `midiChannel` with the intended OP‑XY track.
+
+### Developer Tips
+- Prefer `dest: "name:<id>"` for CC lanes/LFOs (see CC map in docs) to avoid magic numbers.
+- For real‑device smoke, ensure fixtures set `midiChannel` to the target track (e.g., `loop-cc-lfo-ch0.json` for Track 1).
 - Define canonical formatting (ordering, whitespace) and hashing policy.
 - Implement validator and canonicalizer; add fixtures under `conductor/tests/fixtures/*.json`.
 - Document velocity semantics: Accent ≥105, normal 70–100, ghost 30–55. Guardrail: max ratchet density = 8/step.
@@ -151,6 +179,11 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 ```
 
 ## Progress Log
+- [2025-09-14T00:00:00Z] M3a – CC/LFO Runtime + External Transport (slice)
+  - Completed: CC lanes + triangle LFO merge with clamp; name→CC map aligned to OP‑XY spec; channel‑0 real‑device fixture and Make targets; external clock ratio + SPP reposition unit tests; channel mapping/unit guard.
+  - Verify: `make test` (10 tests green); device smoke `make play-cc-lfo-ch0 PORT='OP-XY' BPM=60` and confirm cutoff (CC32) ramps and resonance (CC33) wobbles; phase resets on Play/bar.
+  - Pickup: add metrics counters and jitter aggregation; external transport behavior tests for Continue vs Start; basic rate guards for CC shed; begin Conductor WS skeleton for state/doc broadcast.
+  - Context: branch `feat/m3-cc-lfo-external`, tag `ckpt-m3a`.
 - [2025-09-13T17:20:00Z] M2.5 – Local OP‑XY Player (real device)
   - Completed: Added `conductor/play_local.py` (internal/external clock), `conductor/midi_out.py` (MIDI sink via mido), `conductor/clock.py`; Makefile `play-internal` / `play-external`; `requirements.txt` (mido + python-rtmidi).
   - Verify: With OP‑XY connected, `pip install -r requirements.txt`, then `make play-internal LOOP=conductor/tests/fixtures/loop-drum-accent.json PORT='OP-XY' BPM=120` (OP‑XY should follow and play drums). For external, set OP‑XY as master and run `make play-external ...` and press Play on device.
