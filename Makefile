@@ -28,3 +28,10 @@ test:
 
 demo-note:
 	@$(PY) -m conductor.demo_note
+
+.PHONY: play-internal play-external
+play-internal:
+	@$(PY) -m conductor.play_local $(LOOP) --mode internal --bpm $(BPM) --port "$(PORT)"
+
+play-external:
+	@$(PY) -m conductor.play_local $(LOOP) --mode external --port "$(PORT)"
