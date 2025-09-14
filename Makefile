@@ -36,6 +36,10 @@ play-internal:
 play-external:
 	@$(PY) -m conductor.play_local $(LOOP) --mode external --port "$(PORT)"
 
+.PHONY: conductor-run
+conductor-run:
+	@$(PY) -m conductor.conductor_server --loop $(LOOP) --port "$(PORT)" --bpm $(BPM) --ws-host 127.0.0.1 --ws-port 8765
+
 .PHONY: play-cc-lfo-internal
 play-cc-lfo-internal:
 	@$(PY) -m conductor.play_local conductor/tests/fixtures/loop-cc-lfo.json --mode internal --bpm $(BPM) --port "$(PORT)"

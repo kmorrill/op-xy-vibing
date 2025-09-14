@@ -1,0 +1,232 @@
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+import os
+import signal
+import tempfile
+import threading
+import time
+from typing import Any, Dict, Optional, Set
+
+from conductor.clock import InternalClock
+from conductor.midi_engine import Engine
+from conductor.midi_out import MidoSink, open_mido_output
+from conductor.validator import validate_loop, canonicalize
+from conductor.ws_server import start_ws_server
+
+
+def _atomic_write_json(path: str, obj: Dict[str, Any]) -> None:
+    data = json.dumps(obj, ensure_ascii=False, indent=2) + "\n"
+    d = os.path.dirname(os.path.abspath(path)) or "."
+    fd, tmp = tempfile.mkstemp(prefix=".tmp_loop_", dir=d, text=True)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(data)
+        os.replace(tmp, path)
+    finally:
+        try:
+            os.unlink(tmp)
+        except Exception:
+            pass
+
+
+def _load_json(path: str) -> Dict[str, Any]:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+class Conductor:
+    def __init__(self, loop_path: str, port_filter: Optional[str], bpm: float):
+        self.loop_path = loop_path
+        self.doc: Dict[str, Any] = _load_json(loop_path)
+        self.doc_version = int(self.doc.get("docVersion", 0))
+        self.out = open_mido_output(port_filter)
+        self.sink = MidoSink(self.out, also_send_clock=True)
+        self.engine = Engine(self.sink)
+        self.engine.load(self.doc)
+        self.playing = False
+        self._lock = threading.Lock()
+
+        def on_clock_pulse(_):
+            # Adapt 24 PPQN -> meta.ppq
+            meta = self.doc.get("meta", {})
+            ppq = int(meta.get("ppq", 96))
+            ratio = max(1, ppq // 24)
+            for _ in range(ratio):
+                self.engine.on_tick(self.engine.tick + 1)
+
+        def send_midi_clock():
+            import mido
+
+            try:
+                self.out.send(mido.Message("clock"))
+            except Exception:
+                pass
+
+        self.clock = InternalClock(bpm=bpm, tick_handler=on_clock_pulse, send_midi_clock=send_midi_clock)
+        self.clock.start()
+
+    # --- State/doc ---
+    def get_state(self) -> Dict[str, Any]:
+        with self._lock:
+            return {
+                "transport": "playing" if self.playing else "stopped",
+                "bpm": self.clock.bpm,
+                "tick": self.engine.tick,
+            }
+
+    def get_doc(self) -> Dict[str, Any]:
+        with self._lock:
+            return {"docVersion": self.doc_version, "json": self.doc}
+
+    # --- Control ---
+    def do_play(self) -> None:
+        with self._lock:
+            if not self.playing:
+                self.engine.start()
+                self.playing = True
+
+    def do_continue(self) -> None:
+        # Same as play for MVP; tick preserved
+        self.do_play()
+
+    def do_stop(self) -> None:
+        with self._lock:
+            if self.playing:
+                self.engine.stop()  # flush offs + panic
+                self.playing = False
+                # best-effort MIDI stop message
+                try:
+                    import mido
+
+                    self.out.send(mido.Message("stop"))
+                except Exception:
+                    pass
+
+    def do_set_tempo(self, bpm: float) -> None:
+        self.clock.set_bpm(bpm)
+
+    def do_replace_json(self, base_version: int, new_doc: Dict[str, Any]) -> Dict[str, Any]:
+        with self._lock:
+            if base_version != self.doc_version:
+                return {"ok": False, "error": "stale", "expected": self.doc_version}
+            errors = validate_loop(new_doc)
+            if errors:
+                return {"ok": False, "error": "validation", "details": errors}
+            canon = canonicalize(new_doc)
+            # increment version and persist
+            self.doc_version += 1
+            canon["docVersion"] = self.doc_version
+            _atomic_write_json(self.loop_path, canon)
+            self.doc = canon
+            self.engine.replace_doc(self.doc)
+            return {"ok": True, "docVersion": self.doc_version}
+
+
+async def serve_ws(conductor: Conductor, host: str, port: int):
+    try:
+        import websockets  # type: ignore
+    except Exception:
+        print("[ws] websockets not installed; cannot start Conductor WS")
+        return
+
+    clients: Set[Any] = set()
+
+    async def broadcast(obj: Dict[str, Any]):
+        if not clients:
+            return
+        msg = json.dumps(obj)
+        await asyncio.gather(*[c.send(msg) for c in list(clients)], return_exceptions=True)
+
+    async def metrics_task():
+        while True:
+            await asyncio.sleep(1.0)
+            try:
+                await broadcast({
+                    "type": "metrics",
+                    "ts": time.time(),
+                    "payload": {
+                        "engine": conductor.engine.get_metrics(),
+                        "clock": conductor.clock.get_metrics(),
+                    },
+                })
+                await broadcast({"type": "state", "ts": time.time(), "payload": conductor.get_state()})
+            except Exception:
+                pass
+
+    async def handler(ws, path):
+        clients.add(ws)
+        # Send initial doc/state
+        await ws.send(json.dumps({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()}))
+        await ws.send(json.dumps({"type": "state", "ts": time.time(), "payload": conductor.get_state()}))
+        try:
+            async for message in ws:
+                try:
+                    obj = json.loads(message)
+                except Exception:
+                    continue
+                t = obj.get("type")
+                if t == "play":
+                    conductor.do_play()
+                elif t == "stop":
+                    conductor.do_stop()
+                elif t == "continue":
+                    conductor.do_continue()
+                elif t == "setTempo":
+                    bpm = float(obj.get("bpm", conductor.clock.bpm))
+                    conductor.do_set_tempo(bpm)
+                elif t == "replaceJSON":
+                    payload = obj.get("payload", {})
+                    base = int(payload.get("baseVersion", -1))
+                    new_doc = payload.get("doc")
+                    if isinstance(new_doc, dict):
+                        res = conductor.do_replace_json(base, new_doc)
+                        await ws.send(json.dumps({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()}))
+                        await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": res}) if not res.get("ok") else json.dumps({"type": "ack", "ts": time.time(), "payload": res}))
+                # broadcast updated state after commands
+                await ws.send(json.dumps({"type": "state", "ts": time.time(), "payload": conductor.get_state()}))
+        finally:
+            clients.discard(ws)
+
+    async def main():
+        async with websockets.serve(handler, host, port):
+            print(f"[ws] Conductor listening on ws://{host}:{port}")
+            asyncio.create_task(metrics_task())
+            await asyncio.Future()
+
+    await main()
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Conductor WS server (doc/state/metrics + transport)")
+    ap.add_argument("--loop", default="loop.json")
+    ap.add_argument("--port", help="Substring to match MIDI port (e.g., 'OP-XY')")
+    ap.add_argument("--bpm", type=float, default=120.0)
+    ap.add_argument("--ws-host", default="127.0.0.1")
+    ap.add_argument("--ws-port", type=int, default=8765)
+    args = ap.parse_args()
+
+    conductor = Conductor(args.loop, args.port, args.bpm)
+
+    def shutdown(*_):
+        try:
+            conductor.do_stop()
+        except Exception:
+            pass
+        print("[ws] shutting down")
+        os._exit(0)
+
+    signal.signal(signal.SIGINT, shutdown)
+    signal.signal(signal.SIGTERM, shutdown)
+
+    try:
+        asyncio.run(serve_ws(conductor, args.ws_host, args.ws_port))
+    except KeyboardInterrupt:
+        shutdown()
+
+
+if __name__ == "__main__":
+    main()
+

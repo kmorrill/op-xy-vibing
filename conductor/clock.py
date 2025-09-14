@@ -19,6 +19,7 @@ class InternalClock:
         self._tick = 0
         self._jitter_ms: Deque[float] = deque(maxlen=512)
         self._lock = threading.Lock()
+        self._interval = 60.0 / (self.bpm * 24.0)
 
     def start(self):
         if self._t and self._t.is_alive():
@@ -33,8 +34,7 @@ class InternalClock:
             self._t.join(timeout=1.0)
 
     def _run(self):
-        # interval between MIDI clock pulses at 24 PPQN
-        interval = 60.0 / (self.bpm * 24.0)
+        # interval between MIDI clock pulses at 24 PPQN (updated via set_bpm)
         next_call = time.monotonic()
         while not self._stop.is_set():
             now = time.monotonic()
@@ -43,6 +43,8 @@ class InternalClock:
                 jitter_ms = max(0.0, (now - next_call) * 1000.0)
                 with self._lock:
                     self._jitter_ms.append(jitter_ms)
+                with self._lock:
+                    interval = self._interval
                 next_call += interval
                 # Send MIDI clock pulse if requested
                 if self.send_midi_clock:
@@ -76,6 +78,11 @@ class InternalClock:
             "jitterMsP95": round(self._percentile(samples, 0.95), 3),
             "jitterMsP99": round(self._percentile(samples, 0.99), 3),
         }
+
+    def set_bpm(self, bpm: float) -> None:
+        with self._lock:
+            self.bpm = float(bpm)
+            self._interval = 60.0 / (self.bpm * 24.0)
 
 
 class ExternalClock:
