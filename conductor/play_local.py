@@ -10,6 +10,7 @@ from typing import Optional
 from conductor.midi_engine import Engine
 from conductor.midi_out import MidoSink, open_mido_output, open_mido_input
 from conductor.clock import InternalClock
+from conductor.ws_server import start_ws_server
 
 
 def load_loop(path: str) -> dict:
@@ -17,7 +18,7 @@ def load_loop(path: str) -> dict:
         return json.load(f)
 
 
-def run_internal(loop_path: str, port_filter: Optional[str], bpm: float, loops: Optional[int] = None, print_metrics: bool = False):
+def run_internal(loop_path: str, port_filter: Optional[str], bpm: float, loops: Optional[int] = None, print_metrics: bool = False, ws: bool = False):
     import mido
 
     loop = load_loop(loop_path)
@@ -95,6 +96,8 @@ def run_internal(loop_path: str, port_filter: Optional[str], bpm: float, loops: 
     signal.signal(signal.SIGTERM, shutdown)
 
     clk.start()
+    if ws:
+        start_ws_server(eng, clk)
     if print_metrics:
         t = threading.Thread(target=metrics_printer, daemon=True)
         t.start()
@@ -160,10 +163,18 @@ def main():
     ap.add_argument("--bpm", type=float, default=120.0, help="BPM when using internal mode")
     ap.add_argument("--loops", type=int, default=0, help="Number of full loop cycles to play (internal mode). 0 = infinite")
     ap.add_argument("--metrics", action="store_true", help="Print basic runtime metrics once per second (internal mode)")
+    ap.add_argument("--ws", action="store_true", help="Start a local WS server to broadcast metrics (ws://127.0.0.1:8765)")
     args = ap.parse_args()
 
     if args.mode == "internal":
-        run_internal(args.loop, args.port, args.bpm, loops=(args.loops if args.loops and args.loops > 0 else None), print_metrics=bool(args.metrics))
+        run_internal(
+            args.loop,
+            args.port,
+            args.bpm,
+            loops=(args.loops if args.loops and args.loops > 0 else None),
+            print_metrics=bool(args.metrics),
+            ws=bool(args.ws),
+        )
     else:
         run_external(args.loop, args.port)
 

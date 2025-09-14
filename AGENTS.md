@@ -189,6 +189,11 @@ Policy:
   - Verify: `make test` (11 tests green); device smoke `make play-cc-lfo-ch0 PORT='OP-XY' BPM=60 METRICS=--metrics` and observe metrics printing once per second.
   - Pickup: external transport Continue semantics test; jitter aggregation in `InternalClock`; Conductor WS broadcaster skeleton for `state/doc/metrics`.
   - Context: merged into `main` via PR #5; continue M3 work on new PR.
+- [2025-09-14T00:45:00Z] M3c – Jitter + WS Metrics (skeleton)
+  - Completed: InternalClock jitter tracking with p95/p99; `clock.get_metrics()`; minimal WS broadcaster skeleton (`conductor/ws_server.py`) using `websockets` to stream metrics once per second; `play_local --ws` flag to enable.
+  - Verify: `make test` still green; optional: `pip install websockets` then run `python -m conductor.play_local ... --ws --metrics` and connect to ws://127.0.0.1:8765 to observe metrics JSON.
+  - Pickup: integrate broadcaster with Conductor process; add `state` and `doc` payloads; add CI check for optional deps; implement external Continue semantics tests.
+  - Context: changes on `main`.
 - [2025-09-13T17:20:00Z] M2.5 – Local OP‑XY Player (real device)
   - Completed: Added `conductor/play_local.py` (internal/external clock), `conductor/midi_out.py` (MIDI sink via mido), `conductor/clock.py`; Makefile `play-internal` / `play-external`; `requirements.txt` (mido + python-rtmidi).
   - Verify: With OP‑XY connected, `pip install -r requirements.txt`, then `make play-internal LOOP=conductor/tests/fixtures/loop-drum-accent.json PORT='OP-XY' BPM=120` (OP‑XY should follow and play drums). For external, set OP‑XY as master and run `make play-external ...` and press Play on device.

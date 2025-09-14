@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Callable, Optional
+from collections import deque
+from typing import Callable, Optional, Deque, List, Tuple
 
 
 TickHandler = Callable[[int], None]
@@ -16,6 +17,8 @@ class InternalClock:
         self._t: Optional[threading.Thread] = None
         self._stop = threading.Event()
         self._tick = 0
+        self._jitter_ms: Deque[float] = deque(maxlen=512)
+        self._lock = threading.Lock()
 
     def start(self):
         if self._t and self._t.is_alive():
@@ -36,6 +39,10 @@ class InternalClock:
         while not self._stop.is_set():
             now = time.monotonic()
             if now >= next_call:
+                # Record jitter relative to scheduled time
+                jitter_ms = max(0.0, (now - next_call) * 1000.0)
+                with self._lock:
+                    self._jitter_ms.append(jitter_ms)
                 next_call += interval
                 # Send MIDI clock pulse if requested
                 if self.send_midi_clock:
@@ -48,6 +55,28 @@ class InternalClock:
             else:
                 time.sleep(min(0.002, max(0.0, next_call - now)))
 
+    def _percentile(self, values: List[float], pct: float) -> float:
+        if not values:
+            return 0.0
+        xs = sorted(values)
+        k = (len(xs) - 1) * pct
+        f = int(k)
+        c = min(f + 1, len(xs) - 1)
+        if f == c:
+            return xs[f]
+        d0 = xs[f] * (c - k)
+        d1 = xs[c] * (k - f)
+        return d0 + d1
+
+    def get_metrics(self) -> dict:
+        # Return jitter p95/p99 over recent window
+        with self._lock:
+            samples = list(self._jitter_ms)
+        return {
+            "jitterMsP95": round(self._percentile(samples, 0.95), 3),
+            "jitterMsP99": round(self._percentile(samples, 0.99), 3),
+        }
+
 
 class ExternalClock:
     def __init__(self, tick_from_external: Callable[[int], None]):
@@ -55,4 +84,3 @@ class ExternalClock:
         self.on_pulse = tick_from_external
 
     # Wiring of callback is handled by MIDI input (see play_local)
-
