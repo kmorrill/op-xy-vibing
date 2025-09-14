@@ -13,7 +13,7 @@ class TestDrumKitEngine(unittest.TestCase):
         doc = {
             "version": "opxyloop-1.0",
             "meta": {"tempo": 120, "ppq": 96, "stepsPerBar": 16},
-            "deviceProfile": {"drumMap": {"kick": 36, "snare": 38, "ch": 42}},
+            "deviceProfile": {"drumMap": {"kick": 53, "snare": 55, "closed_hat": 61}},
             "tracks": [
                 {
                     "id": "t-drums",
@@ -44,9 +44,9 @@ class TestDrumKitEngine(unittest.TestCase):
             eng.on_tick(t)
         # Count kick/snare/hat note-ons
         ons = [e for e in sink.events if e[0] == "on"]
-        kick_on = len([e for e in ons if e[2] == 36 and e[1] == 9])
-        snare_on = len([e for e in ons if e[2] == 38 and e[1] == 9])
-        ch_on = len([e for e in ons if e[2] == 42 and e[1] == 9])
+        kick_on = len([e for e in ons if e[2] == 53 and e[1] == 9])
+        snare_on = len([e for e in ons if e[2] == 55 and e[1] == 9])
+        ch_on = len([e for e in ons if e[2] == 61 and e[1] == 9])
         self.assertEqual(kick_on, 4)
         self.assertEqual(snare_on, 2)
         self.assertEqual(ch_on, 8)
@@ -56,7 +56,7 @@ class TestDrumKitEngine(unittest.TestCase):
         doc = {
             "version": "opxyloop-1.0",
             "meta": {"tempo": 120, "ppq": 96, "stepsPerBar": 16},
-            "deviceProfile": {"drumMap": {"kick": 36}},
+            "deviceProfile": {"drumMap": {"kick": 53}},
             "tracks": [
                 {
                     "id": "t-drums",
@@ -82,7 +82,7 @@ class TestDrumKitEngine(unittest.TestCase):
         total_ticks = step_ticks * 16 * 2
         for t in range(total_ticks):
             eng.on_tick(t)
-        ons = [e for e in sink.events if e[0] == "on" and e[2] == 36]
+        ons = [e for e in sink.events if e[0] == "on" and e[2] == 53]
         self.assertEqual(len(ons), 2)
 
     def test_drumkit_and_steps_coexist(self):
@@ -90,7 +90,7 @@ class TestDrumKitEngine(unittest.TestCase):
         doc = {
             "version": "opxyloop-1.0",
             "meta": {"tempo": 120, "ppq": 96, "stepsPerBar": 16},
-            "deviceProfile": {"drumMap": {"kick": 36}},
+            "deviceProfile": {"drumMap": {"kick": 53}},
             "tracks": [
                 {
                     "id": "t-mixed",
@@ -118,7 +118,7 @@ class TestDrumKitEngine(unittest.TestCase):
         # Expect two note-ons at tick 0: C4 on ch0 and kick on ch0
         self.assertEqual(len(ons), 2)
         pitches = sorted([e[2] for e in ons])
-        self.assertEqual(pitches, [36, 60])
+        self.assertEqual(pitches, [53, 60])
 
 
 if __name__ == "__main__":

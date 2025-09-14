@@ -56,14 +56,68 @@ Provides per‑project settings specific to the connected OP‑XY device.
 | Key | Type | Required | Description |
 | :---- | :---- | :---- | :---- |
 | **portName** | string | No | MIDI port name to send messages to (e.g., `"OP-XY"`). |
-| **drumMap** | object | No | Friendly drum names mapped to MIDI note numbers (e.g., `"kick": 36`). |
+| **drumMap** | object | No | Friendly drum names mapped to MIDI note numbers (OP‑XY default e.g., `"kick": 53`, `"snare": 55`, `"closed_hat": 61`, `"open_hat": 62`, `"low_tom": 65`, `"mid_tom": 67`, `"high_tom": 69`). |
 
 ### 3.1 `drumMap` example
 
 ```json
 {
   "portName": "OP-XY",
-  "drumMap": { "kick": 36, "snare": 38, "ch": 42, "oh": 46, "clap": 39 }
+  "drumMap": {
+    "kick": 53,
+    "kick_alt": 54,
+    "snare": 55,
+    "snare_alt": 56,
+    "rim": 57,
+    "clap": 58,
+    "tambourine": 59,
+    "shaker": 60,
+    "closed_hat": 61,
+    "open_hat": 62,
+    "pedal_hat": 63,
+    "low_tom": 65,
+    "crash": 66,
+    "mid_tom": 67,
+    "ride": 68,
+    "high_tom": 69,
+    "conga_low": 71,
+    "conga_high": 72,
+    "cowbell": 73,
+    "guiro": 74,
+    "metal": 75,
+    "chi": 76
+  }
+}
+```
+
+### 3.2 OP‑XY Drum Map (default)
+
+Runtimes SHOULD provide the following OP‑XY drum map by default and overlay any values found in `deviceProfile.drumMap` (lower‑cased keys). Aliases like `ch`→`closed_hat`, `oh`→`open_hat`, and `hh`→`closed_hat` MAY be normalized at runtime.
+
+```json
+{
+  "kick": 53,
+  "kick_alt": 54,
+  "snare": 55,
+  "snare_alt": 56,
+  "rim": 57,
+  "clap": 58,
+  "tambourine": 59,
+  "shaker": 60,
+  "closed_hat": 61,
+  "open_hat": 62,
+  "pedal_hat": 63,
+  "low_tom": 65,
+  "crash": 66,
+  "mid_tom": 67,
+  "ride": 68,
+  "high_tom": 69,
+  "conga_low": 71,
+  "conga_high": 72,
+  "cowbell": 73,
+  "guiro": 74,
+  "metal": 75,
+  "chi": 76
 }
 ```
 
@@ -180,7 +234,7 @@ Within a drum track, add a `drumKit` object with these fields:
 **DrumPatternSpec** (elements of `drumKit.patterns`):
 
 - **bar** (integer ≥ 1) — the starting bar where this pattern applies.
-- **key** (string) — **must** be a key in `deviceProfile.drumMap` (e.g., `"kick"`, `"snare"`, `"clap"`, `"ch"`, `"oh"`).
+- **key** (string) — **must** be a key in `deviceProfile.drumMap` (e.g., `"kick"`, `"snare"`, `"clap"`, `"closed_hat"`, `"open_hat"`). Aliases like `"ch"`/`"oh"` MAY be accepted by runtimes and normalized to the canonical keys.
 - **pattern** (string) — exactly **`meta.stepsPerBar`** characters; allowed chars: `x` (hit), `.` or `-` (rest). No whitespace.
 - **vel** (integer 1–127, optional) — velocity for all hits produced by this spec; if omitted, use a reasonable default (e.g., 100).
 - **lengthSteps** (integer ≥ 1, optional) — per‑spec override; falls back to `drumKit.lengthSteps` if not set.
@@ -220,7 +274,7 @@ If multiple specs produce hits at the same `idx` (e.g., kick and clap together),
   "meta": { "tempo": 112, "ppq": 96, "stepsPerBar": 16, "swing": 0.10 },
   "deviceProfile": {
     "portName": "OP-XY",
-    "drumMap": { "kick": 36, "snare": 38, "clap": 39, "ch": 42, "oh": 46 }
+    "drumMap": { "kick": 53, "kick_alt": 54, "snare": 55, "snare_alt": 56, "rim": 57, "clap": 58, "tambourine": 59, "shaker": 60, "closed_hat": 61, "open_hat": 62, "pedal_hat": 63, "low_tom": 65, "crash": 66, "mid_tom": 67, "ride": 68, "high_tom": 69, "conga_low": 71, "conga_high": 72, "cowbell": 73, "guiro": 74, "metal": 75, "chi": 76 }
   },
   "tracks": [
     {
@@ -233,8 +287,8 @@ If multiple specs produce hits at the same `idx` (e.g., kick and clap together),
         "patterns": [
           { "bar": 1, "key": "kick", "pattern": "x...x...x...x...", "vel": 120 },
           { "bar": 1, "key": "clap", "pattern": "..x...x...x...x.", "vel": 102 },
-          { "bar": 1, "key": "ch",   "pattern": ".x.x.x.x.x.x.x.x", "vel": 80  },
-          { "bar": 1, "key": "oh",   "pattern": "................", "vel": 95  }
+          { "bar": 1, "key": "closed_hat",   "pattern": ".x.x.x.x.x.x.x.x", "vel": 80  },
+          { "bar": 1, "key": "open_hat",   "pattern": "................", "vel": 95  }
         ],
         "repeatBars": 8,
         "lengthSteps": 1
@@ -329,22 +383,22 @@ Runtime‑generated periodic modulation (distinct from explicit CC points).
   "meta": { "tempo": 120, "ppq": 480, "stepsPerBar": 16 },
   "deviceProfile": {
     "portName": "OP-XY",
-    "drumMap": { "kick": 36, "snare": 38, "ch": 42, "oh": 46 }
+    "drumMap": { "kick": 53, "kick_alt": 54, "snare": 55, "snare_alt": 56, "rim": 57, "clap": 58, "tambourine": 59, "shaker": 60, "closed_hat": 61, "open_hat": 62, "pedal_hat": 63, "low_tom": 65, "crash": 66, "mid_tom": 67, "ride": 68, "high_tom": 69, "conga_low": 71, "conga_high": 72, "cowbell": 73, "guiro": 74, "metal": 75, "chi": 76 }
   },
   "tracks": [
     {
       "id": "t-drum",
       "name": "Drums",
       "type": "sampler",
-      "midiChannel": 9,
+      "midiChannel": 0,
       "role": "drums",
       "pattern": {
         "lengthBars": 1,
         "steps": [
-          { "idx": 0,  "events": [{ "pitch": 36, "lengthSteps": 2, "velocity": 112 }] },
-          { "idx": 4,  "events": [{ "pitch": 38, "lengthSteps": 2, "velocity": 104 }] },
-          { "idx": 8,  "events": [{ "pitch": 36, "lengthSteps": 2, "velocity": 112, "ratchet": 2 }] },
-          { "idx": 12, "events": [{ "pitch": 38, "lengthSteps": 2, "velocity": 104, "prob": 0.8 }] }
+          { "idx": 0,  "events": [{ "pitch": 53, "lengthSteps": 2, "velocity": 112 }] },
+          { "idx": 4,  "events": [{ "pitch": 55, "lengthSteps": 2, "velocity": 104 }] },
+          { "idx": 8,  "events": [{ "pitch": 53, "lengthSteps": 2, "velocity": 112, "ratchet": 2 }] },
+          { "idx": 12, "events": [{ "pitch": 55, "lengthSteps": 2, "velocity": 104, "prob": 0.8 }] }
         ]
       }
     }
@@ -434,7 +488,7 @@ See §5.1.2 for schema and semantics. Here’s a minimal one‑bar example that 
 {
   "version": "opxyloop-1.0",
   "meta": { "tempo": 120, "ppq": 480, "stepsPerBar": 16 },
-  "deviceProfile": { "portName": "OP-XY", "drumMap": { "kick": 36, "snare": 38 } },
+  "deviceProfile": { "portName": "OP-XY", "drumMap": { "kick": 53, "kick_alt": 54, "snare": 55, "snare_alt": 56, "rim": 57, "clap": 58, "tambourine": 59, "shaker": 60, "closed_hat": 61, "open_hat": 62, "pedal_hat": 63, "low_tom": 65, "crash": 66, "mid_tom": 67, "ride": 68, "high_tom": 69, "conga_low": 71, "conga_high": 72, "cowbell": 73, "guiro": 74, "metal": 75, "chi": 76 } },
   "tracks": [
     {
       "id": "t-drums",
@@ -464,7 +518,7 @@ See §5.1.2 for schema and semantics. Here’s a minimal one‑bar example that 
   "meta": { "tempo": 112, "ppq": 96, "stepsPerBar": 16, "swing": 0.10 },
   "deviceProfile": {
     "portName": "OP-XY",
-    "drumMap": { "kick": 36, "snare": 38, "clap": 39, "ch": 42, "oh": 46 }
+    "drumMap": { "kick": 53, "kick_alt": 54, "snare": 55, "snare_alt": 56, "rim": 57, "clap": 58, "tambourine": 59, "shaker": 60, "closed_hat": 61, "open_hat": 62, "pedal_hat": 63, "low_tom": 65, "crash": 66, "mid_tom": 67, "ride": 68, "high_tom": 69, "conga_low": 71, "conga_high": 72, "cowbell": 73, "guiro": 74, "metal": 75, "chi": 76 }
   },
   "tracks": [
     {
@@ -476,9 +530,9 @@ See §5.1.2 for schema and semantics. Here’s a minimal one‑bar example that 
       "pattern": {
         "lengthBars": 4,
         "steps": [
-          { "idx": 0,  "events": [{ "pitch": 36, "velocity": 120, "lengthSteps": 1 }] },
-          { "idx": 6,  "events": [{ "pitch": 39, "velocity": 102, "lengthSteps": 1 }] },
-          { "idx": 2,  "events": [{ "pitch": 42, "velocity": 80,  "lengthSteps": 1 }] }
+          { "idx": 0,  "events": [{ "pitch": 53, "velocity": 120, "lengthSteps": 1 }] },
+          { "idx": 6,  "events": [{ "pitch": 58, "velocity": 102, "lengthSteps": 1 }] },
+          { "idx": 2,  "events": [{ "pitch": 61, "velocity": 80,  "lengthSteps": 1 }] }
         ]
       }
     },
