@@ -40,6 +40,10 @@ play-external:
 conductor-run:
 	@$(PY) -m conductor.conductor_server --loop $(LOOP) --port "$(PORT)" --bpm $(BPM) --ws-host 127.0.0.1 --ws-port 8765
 
+.PHONY: ui-serve
+ui-serve:
+	@cd ui && $(PY) -m http.server 8080
+
 .PHONY: ws-play ws-stop ws-continue ws-tempo ws-patch-vel
 ws-play:
 	@$(PY) tools/wsctl.py --url ws://127.0.0.1:8765 play

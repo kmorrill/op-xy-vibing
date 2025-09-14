@@ -1,0 +1,138 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OP‑XY Conductor – UI</title>
+    <style>
+      body { font-family: -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 16px; color: #111; }
+      h1 { margin: 0 0 8px; font-size: 18px; }
+      .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+      button { padding: 6px 10px; font-size: 14px; }
+      input[type="number"] { width: 80px; padding: 4px; }
+      #status { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: #444; }
+      .tracks { display: grid; gap: 12px; margin-top: 12px; }
+      .track { border: 1px solid #ddd; border-radius: 6px; padding: 8px; }
+      .track h3 { margin: 0 0 6px; font-size: 14px; display: flex; justify-content: space-between; }
+      .grid { display: grid; gap: 2px; }
+      .cell { width: 16px; height: 16px; background: #eee; border-radius: 3px; }
+      .cell.on { background: #5aa7ff; }
+      .cell.v-hi { background: #0057ff; }
+      .cell.v-mid { background: #4d8dff; }
+      .cell.v-low { background: #a7c7ff; }
+      .dk { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; background: #fafafa; padding: 6px; border-radius: 4px; border: 1px dashed #ddd; white-space: pre; overflow-x: auto; }
+      .pill { font-size: 11px; padding: 2px 6px; border-radius: 999px; background: #f2f2f2; margin-left: 6px; }
+    </style>
+  </head>
+  <body>
+    <h1>OP‑XY Conductor – Local UI</h1>
+    <div class="row">
+      <button id="btnPlay">Play</button>
+      <button id="btnStop">Stop</button>
+      <button id="btnCont">Continue</button>
+      <label>BPM <input id="bpm" type="number" value="100" min="20" max="300" /></label>
+      <button id="btnTempo">Set Tempo</button>
+      <span id="status"></span>
+    </div>
+
+    <div id="meta"></div>
+    <div class="tracks" id="tracks"></div>
+
+    <script>
+      const wsUrl = 'ws://127.0.0.1:8765';
+      let ws; let lastDoc = null; let lastState = null;
+      const status = document.getElementById('status');
+      function setStatus(s) { status.textContent = s; }
+
+      function connect() {
+        ws = new WebSocket(wsUrl);
+        ws.onopen = () => setStatus('WS connected');
+        ws.onclose = () => setStatus('WS disconnected');
+        ws.onmessage = (ev) => {
+          try { const msg = JSON.parse(ev.data); handle(msg); } catch {}
+        };
+      }
+
+      function handle(msg) {
+        if (msg.type === 'doc') { lastDoc = msg.payload; renderDoc(); }
+        if (msg.type === 'state') { lastState = msg.payload; renderState(); }
+        if (msg.type === 'metrics') { /* could render later */ }
+      }
+
+      function renderState() {
+        if (!lastState) return;
+        const { transport, bpm, barBeatTick } = lastState;
+        const bbt = barBeatTick ? ` beat=${barBeatTick.beat} tickInBar=${barBeatTick.tickInBar}/${barBeatTick.barTicks}` : '';
+        setStatus(`transport=${transport} bpm=${bpm}${bbt}`);
+      }
+
+      function renderDoc() {
+        if (!lastDoc) return;
+        const wrap = document.getElementById('tracks');
+        wrap.innerHTML = '';
+        const meta = lastDoc.json.meta || {}; const spb = meta.stepsPerBar || 16; const ppq = meta.ppq || 96;
+        document.getElementById('bpm').value = (lastState && lastState.bpm) || (meta.tempo || 120);
+        const metaDiv = document.getElementById('meta');
+        metaDiv.textContent = `docVersion=${lastDoc.docVersion} sha=${lastDoc.sha256?.slice(0,8)}`;
+
+        const tracks = (lastDoc.json.tracks || []);
+        tracks.forEach((tr, ti) => {
+          const div = document.createElement('div'); div.className = 'track';
+          const h3 = document.createElement('h3');
+          const left = document.createElement('span'); left.textContent = `${tr.name || tr.id || 'Track'} (ch ${tr.midiChannel ?? 0})`;
+          const right = document.createElement('span'); right.className = 'pill'; right.textContent = tr.type || 'sampler';
+          h3.appendChild(left); h3.appendChild(right); div.appendChild(h3);
+
+          // Steps grid (pattern.steps)
+          const pat = tr.pattern || {}; const steps = pat.steps || []; const bars = Math.max(1, pat.lengthBars || 1);
+          const total = bars * spb;
+          const vals = Array(total).fill(0);
+          steps.forEach(st => {
+            const idx = st.idx|0; const events = st.events || [];
+            if (idx >= 0 && events.length) {
+              const v = Math.max(1, Math.min(127, events[0].velocity || 100));
+              vals[(idx % total)] = v;
+            }
+          });
+          const grid = document.createElement('div'); grid.className = 'grid';
+          grid.style.gridTemplateColumns = `repeat(${total}, 16px)`;
+          for (let i=0;i<total;i++) {
+            const c = document.createElement('div'); c.className = 'cell';
+            const v = vals[i]; if (v>0){ c.classList.add('on'); if (v>=105) c.classList.add('v-hi'); else if (v>=70) c.classList.add('v-mid'); else c.classList.add('v-low'); }
+            // Bar separators: lighten background every bar start
+            if (i % spb === 0) { c.style.outline = '1px solid #ccc'; }
+            grid.appendChild(c);
+          }
+          div.appendChild(grid);
+
+          // DrumKit patterns, if any
+          if (tr.drumKit && Array.isArray(tr.drumKit.patterns)) {
+            const byKey = {};
+            tr.drumKit.patterns.forEach(p => { const k = p.key || 'key'; (byKey[k]||(byKey[k]=[])).push(p); });
+            const pre = document.createElement('div'); pre.className='dk';
+            let text = 'drumKit patterns (per bar):\n';
+            Object.keys(byKey).sort().forEach(k => {
+              const arr = byKey[k].sort((a,b)=>(a.bar||1)-(b.bar||1));
+              arr.forEach(p => { text += `${String(k).padEnd(8)} b${p.bar||1}: ${p.pattern||''}\n`; });
+            });
+            pre.textContent = text; div.appendChild(pre);
+          }
+
+          wrap.appendChild(div);
+        });
+      }
+
+      // Controls
+      document.getElementById('btnPlay').onclick = () => ws && ws.send(JSON.stringify({type:'play'}));
+      document.getElementById('btnStop').onclick = () => ws && ws.send(JSON.stringify({type:'stop'}));
+      document.getElementById('btnCont').onclick = () => ws && ws.send(JSON.stringify({type:'continue'}));
+      document.getElementById('btnTempo').onclick = () => {
+        const bpm = parseFloat(document.getElementById('bpm').value||'120');
+        ws && ws.send(JSON.stringify({type:'setTempo', bpm}));
+      };
+
+      connect();
+    </script>
+  </body>
+  </html>
+
