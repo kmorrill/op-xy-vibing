@@ -344,14 +344,13 @@ class Engine:
                         # Compute steps per cycle from sync string like '1/8'
                         steps_per_cycle = 0
                         if isinstance(sync, str) and "/" in sync:
-                            # In 16 steps per bar, note length n/d => steps_per_cycle = (spb * 4/d) ?
-                            # Minimal approach: 1/8 => 2 steps, 1/4 => 4 steps, 1/2 => 8, 1/1 => 16
+                            # In 4/4 with spb steps per bar, 1/n note = spb/n steps per cycle
                             try:
                                 denom = int(sync.split("/", 1)[1])
                                 if denom > 0:
-                                    steps_per_cycle = max(1, int(16 / (16 / denom)))  # simplifies to denom? use mapping
+                                    steps_per_cycle = max(1, int(spb // denom))
                             except Exception:
-                                steps_per_cycle = 2
+                                steps_per_cycle = 0
                         if steps_per_cycle <= 0:
                             # Default to 1/8
                             steps_per_cycle = 2
@@ -374,7 +373,23 @@ class Engine:
             for ctrl in sorted(all_controls):
                 base = base_values.get(ctrl, 64)
                 off = lfo_offsets.get(ctrl, 0)
-                value = max(0, min(127, int(base + off)))
+                # LFO offset parameter (baseline) if provided on the LFO spec
+                # We approximate by looking for any lfo targeting this ctrl and reading its 'offset'
+                lfo_offset_baseline = 0
+                try:
+                    for lf in lfos:
+                        d = str(lf.get("dest", ""))
+                        c = None
+                        if d.startswith("cc:"):
+                            c = int(d.split(":", 1)[1])
+                        elif d.startswith("name:"):
+                            c = name_cc.get(d.split(":", 1)[1])
+                        if c == ctrl:
+                            lfo_offset_baseline = int(lf.get("offset", 0))
+                            break
+                except Exception:
+                    pass
+                value = max(0, min(127, int(lfo_offset_baseline + base + off)))
                 key = (ch, int(ctrl))
                 if self._last_cc.get(key) != value:
                     self._last_cc[key] = value
