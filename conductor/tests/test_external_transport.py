@@ -76,3 +76,31 @@ class TestExternalTransport(unittest.TestCase):
         ons = [e for e in sink.events if e[0] == "on"]
         self.assertEqual(len(ons), 1)
 
+    def test_continue_does_not_reset_tick(self):
+        # Engine.tick should be preserved across stop() and subsequent start() (Continue semantics)
+        doc = {
+            "version": "opxyloop-1.0",
+            "meta": {"tempo": 120, "ppq": 96, "stepsPerBar": 16},
+            "tracks": [
+                {
+                    "id": "t1",
+                    "name": "Synth",
+                    "type": "sampler",
+                    "midiChannel": 0,
+                    "pattern": {"lengthBars": 1, "steps": []},
+                }
+            ],
+        }
+        sink = VirtualSink()
+        eng = Engine(sink)
+        eng.load(doc)
+        # Advance some ticks, then stop and continue
+        eng.on_tick(100)
+        self.assertEqual(eng.tick, 100)
+        eng.stop()
+        self.assertEqual(eng.tick, 100)  # stop should not reset tick
+        eng.start()  # continue
+        self.assertEqual(eng.tick, 100)  # start (continue) should not reset tick
+        # Resume ticking from preserved position
+        eng.on_tick(101)
+        self.assertEqual(eng.tick, 101)

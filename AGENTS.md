@@ -194,6 +194,11 @@ Policy:
   - Verify: `make test` still green; optional: `pip install websockets` then run `python -m conductor.play_local ... --ws --metrics` and connect to ws://127.0.0.1:8765 to observe metrics JSON.
   - Pickup: integrate broadcaster with Conductor process; add `state` and `doc` payloads; add CI check for optional deps; implement external Continue semantics tests.
   - Context: changes on `main`.
+- [2025-09-14T01:00:00Z] M3d – External Transport Continue semantics (test)
+  - Completed: Added unit test to assert Continue semantics do not reset engine tick; retains position across stop/start and resumes correctly.
+  - Verify: `make test` (12 tests green).
+  - Pickup: Integrate WS broadcaster into a Conductor process stub emitting `state/doc/metrics`; start wiring JSON Patch gate (no-ops allowed).
+  - Context: changes on `main`.
 - [2025-09-13T17:20:00Z] M2.5 – Local OP‑XY Player (real device)
   - Completed: Added `conductor/play_local.py` (internal/external clock), `conductor/midi_out.py` (MIDI sink via mido), `conductor/clock.py`; Makefile `play-internal` / `play-external`; `requirements.txt` (mido + python-rtmidi).
   - Verify: With OP‑XY connected, `pip install -r requirements.txt`, then `make play-internal LOOP=conductor/tests/fixtures/loop-drum-accent.json PORT='OP-XY' BPM=120` (OP‑XY should follow and play drums). For external, set OP‑XY as master and run `make play-external ...` and press Play on device.
