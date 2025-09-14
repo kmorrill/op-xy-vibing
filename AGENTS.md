@@ -107,6 +107,22 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 | Observability & KPIs | Time since last commit, commit size, rollback success. |
 | Runbook | Ensure repo initialized; configure author; verify `.gitignore`; review diffs; checkpoint before risky edits. |
 
+## PR Workflow (GitHub CLI)
+
+- Work via Pull Requests, not direct pushes to `main`.
+- Use GitHub CLI (`gh`) to open, review, and merge PRs from the terminal.
+- Typical flow:
+  - `git checkout -b feat/<short-scope>` and implement changes
+  - `git push -u origin HEAD`
+  - `gh pr create --base main --head <branch> --title "<title>" --body "<summary + Verify: steps>"`
+  - `gh pr list -s open` and `gh pr view <PR#> --web` (or `--comments`)
+  - `gh pr merge <PR#> --merge --delete-branch` (use `--squash`/`--rebase` per policy)
+  - `git checkout main && git pull --ff-only`
+
+Policy:
+- Keep PRs small and vertical with explicit Verify steps and expected outcomes.
+- Do not merge with failing CI; adjust tests or tolerances only with justification.
+
 ## Test Harness Agent
 
 | Area | Details |
