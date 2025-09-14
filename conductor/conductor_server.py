@@ -15,6 +15,7 @@ from conductor.midi_engine import Engine
 from conductor.midi_out import MidoSink, open_mido_output
 from conductor.validator import validate_loop, canonicalize
 from conductor.ws_server import start_ws_server
+from conductor.patch_utils import apply_patch as apply_json_patch
 
 
 def _atomic_write_json(path: str, obj: Dict[str, Any]) -> None:
@@ -71,15 +72,37 @@ class Conductor:
     # --- State/doc ---
     def get_state(self) -> Dict[str, Any]:
         with self._lock:
+            # Compute bar:beat:tick within current bar (4/4 assumed)
+            meta = self.doc.get("meta", {})
+            ppq = int(meta.get("ppq", 96))
+            spb = int(meta.get("stepsPerBar", 16))
+            step_ticks = int((ppq * 4) / spb) if spb > 0 else 0
+            bar_ticks = step_ticks * spb if step_ticks > 0 else 0
+            t = int(self.engine.tick)
+            if bar_ticks > 0:
+                tick_in_bar = t % bar_ticks
+            else:
+                tick_in_bar = 0
+            # beat index (0..3) in 4/4, ticks per beat = ppq
+            beat = (tick_in_bar // max(1, ppq)) % 4
             return {
                 "transport": "playing" if self.playing else "stopped",
                 "bpm": self.clock.bpm,
-                "tick": self.engine.tick,
+                "tick": t,
+                "barBeatTick": {
+                    "beat": int(beat),
+                    "tickInBar": int(tick_in_bar),
+                    "barTicks": int(bar_ticks),
+                },
             }
 
     def get_doc(self) -> Dict[str, Any]:
         with self._lock:
-            return {"docVersion": self.doc_version, "json": self.doc}
+            import hashlib, json
+
+            canon_bytes = json.dumps(self.doc, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
+            sha = hashlib.sha256(canon_bytes).hexdigest()
+            return {"docVersion": self.doc_version, "json": self.doc, "sha256": sha}
 
     # --- Control ---
     def do_play(self) -> None:
@@ -185,6 +208,28 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
                         res = conductor.do_replace_json(base, new_doc)
                         await ws.send(json.dumps({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()}))
                         await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": res}) if not res.get("ok") else json.dumps({"type": "ack", "ts": time.time(), "payload": res}))
+                elif t == "applyPatch":
+                    payload = obj.get("payload", {})
+                    base = int(payload.get("baseVersion", -1))
+                    ops = payload.get("ops")
+                    if not isinstance(ops, list):
+                        await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": {"ok": False, "error": "invalid_ops"}}))
+                    else:
+                        with conductor._lock:
+                            if base != conductor.doc_version:
+                                await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": {"ok": False, "error": "stale", "expected": conductor.doc_version}}))
+                            else:
+                                try:
+                                    patched = apply_json_patch(conductor.doc, ops)
+                                except Exception as e:
+                                    await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": {"ok": False, "error": "patch_apply", "details": str(e)}}))
+                                    patched = None
+                                if isinstance(patched, dict):
+                                    res = conductor.do_replace_json(conductor.doc_version, patched)
+                                    if res.get("ok"):
+                                        await ws.send(json.dumps({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()}))
+                                    else:
+                                        await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": res}))
                 # broadcast updated state after commands
                 await ws.send(json.dumps({"type": "state", "ts": time.time(), "payload": conductor.get_state()}))
         finally:
@@ -229,4 +274,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
