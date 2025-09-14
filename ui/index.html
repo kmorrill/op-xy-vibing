@@ -31,7 +31,7 @@
       <button id="btnStop">Stop</button>
       <button id="btnCont">Continue</button>
       <label>BPM <input id="bpm" type="number" value="100" min="20" max="300" /></label>
-      <button id="btnTempo">Set Tempo</button>
+      <button id="btnPushTempo">Push tempo</button>
       <span id="status"></span>
     </div>
 
@@ -51,6 +51,8 @@
         ws.onmessage = (ev) => {
           try { const msg = JSON.parse(ev.data); handle(msg); } catch {}
         };
+        // Fallback poll: request state every 1s in case server isn't pushing
+        setInterval(() => { try { ws && ws.readyState === 1 && ws.send(JSON.stringify({type:'getState'})); } catch(e){} }, 1000);
       }
 
       function handle(msg) {
@@ -61,9 +63,16 @@
 
       function renderState() {
         if (!lastState) return;
-        const { transport, bpm, barBeatTick } = lastState;
+        const { transport, bpm, barBeatTick, clockSource } = lastState;
         const bbt = barBeatTick ? ` beat=${barBeatTick.beat} tickInBar=${barBeatTick.tickInBar}/${barBeatTick.barTicks}` : '';
-        setStatus(`transport=${transport} bpm=${bpm}${bbt}`);
+        setStatus(`clock=${clockSource||'internal'} transport=${transport} bpm=${bpm}${bbt}`);
+        // Reflect external tempo changes in the BPM input as well
+        const bpmInput = document.getElementById('bpm');
+        // Do not clobber user's typing when the field has focus
+        if (bpm && bpmInput && document.activeElement !== bpmInput) {
+          bpmInput.value = (Math.round(bpm * 10) / 10).toFixed(1);
+        }
+        // (no clock toggle button in simplified UI)
       }
 
       function renderDoc() {
@@ -126,13 +135,16 @@
       document.getElementById('btnPlay').onclick = () => ws && ws.send(JSON.stringify({type:'play'}));
       document.getElementById('btnStop').onclick = () => ws && ws.send(JSON.stringify({type:'stop'}));
       document.getElementById('btnCont').onclick = () => ws && ws.send(JSON.stringify({type:'continue'}));
-      document.getElementById('btnTempo').onclick = () => {
-        const bpm = parseFloat(document.getElementById('bpm').value||'120');
-        ws && ws.send(JSON.stringify({type:'setTempo', bpm}));
+      // Simplified: Push tempo sends CC80 mapping; device remains master
+      document.getElementById('btnPushTempo').onclick = () => {
+        if (!ws || ws.readyState !== 1) return;
+        const bpmField = document.getElementById('bpm');
+        const bpm = parseFloat(bpmField.value||'120');
+        if (!isFinite(bpm) || bpm <= 0) return;
+        ws.send(JSON.stringify({type:'setTempoCC', bpm}));
       };
 
       connect();
     </script>
   </body>
   </html>
-
