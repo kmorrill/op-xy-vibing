@@ -1,0 +1,9 @@
+# Python virtual environments
+.venv/
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+
+# macOS noise
+.DS_Store
