@@ -57,6 +57,8 @@ class Conductor:
             ratio = max(1, ppq // 24)
             for _ in range(ratio):
                 self.engine.on_tick(self.engine.tick + 1)
+                # Evaluate pending structural applies at bar boundary
+                self._maybe_apply_pending()
 
         def send_midi_clock():
             import mido
@@ -68,6 +70,8 @@ class Conductor:
 
         self.clock = InternalClock(bpm=bpm, tick_handler=on_clock_pulse, send_midi_clock=send_midi_clock)
         self.clock.start()
+        # Pending structural doc replace (apply at next bar boundary)
+        self._pending_doc: Optional[Dict[str, Any]] = None
 
     # --- State/doc ---
     def get_state(self) -> Dict[str, Any]:
@@ -147,6 +151,54 @@ class Conductor:
             self.engine.replace_doc(self.doc)
             return {"ok": True, "docVersion": self.doc_version}
 
+    # --- Apply scheduling helpers ---
+    def _is_structural_ops(self, ops: list) -> bool:
+        structural_prefixes = ("/meta/", "/deviceProfile")
+        track_structural_suffixes = (
+            "/id",
+            "/name",
+            "/type",
+            "/midiChannel",
+            "/role",
+            "/pattern/lengthBars",
+            "/drumKit",
+        )
+        for op in ops:
+            p = str(op.get("path", ""))
+            if any(p.startswith(pref) for pref in structural_prefixes):
+                return True
+            if p.startswith("/tracks/"):
+                parts = p.split("/")
+                if len(parts) >= 4:
+                    suffix = "/" + "/".join(parts[3:])
+                    if any(suffix.startswith(s) for s in track_structural_suffixes):
+                        return True
+        return False
+
+    def _schedule_or_apply(self, base_version: int, doc: Dict[str, Any], structural: bool, apply_now: bool = False) -> Dict[str, Any]:
+        if apply_now or not structural or not self.playing:
+            return self.do_replace_json(base_version, doc)
+        # queue for next bar boundary
+        with self._lock:
+            self._pending_doc = doc
+        return {"ok": True, "pending": True, "when": "next_bar", "docVersion": self.doc_version}
+
+    def _maybe_apply_pending(self) -> None:
+        if self._pending_doc is None:
+            return
+        # Apply at bar boundary (tick % bar_ticks == 0)
+        meta = self.doc.get("meta", {})
+        ppq = int(meta.get("ppq", 96))
+        spb = int(meta.get("stepsPerBar", 16))
+        step_ticks = int((ppq * 4) / spb) if spb > 0 else 0
+        bar_ticks = step_ticks * spb if step_ticks > 0 else 0
+        if bar_ticks <= 0 or (self.engine.tick % bar_ticks) == 0:
+            with self._lock:
+                nd = self._pending_doc
+                self._pending_doc = None
+            if isinstance(nd, dict):
+                self.do_replace_json(self.doc_version, nd)
+
 
 async def serve_ws(conductor: Conductor, host: str, port: int):
     try:
@@ -204,14 +256,17 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
                     payload = obj.get("payload", {})
                     base = int(payload.get("baseVersion", -1))
                     new_doc = payload.get("doc")
+                    apply_now = bool(payload.get("applyNow", False))
                     if isinstance(new_doc, dict):
-                        res = conductor.do_replace_json(base, new_doc)
+                        # Determine structural by comparing key fields
+                        res = conductor._schedule_or_apply(base, new_doc, structural=True, apply_now=apply_now)
                         await ws.send(json.dumps({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()}))
                         await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": res}) if not res.get("ok") else json.dumps({"type": "ack", "ts": time.time(), "payload": res}))
                 elif t == "applyPatch":
                     payload = obj.get("payload", {})
                     base = int(payload.get("baseVersion", -1))
                     ops = payload.get("ops")
+                    apply_now = bool(payload.get("applyNow", False))
                     if not isinstance(ops, list):
                         await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": {"ok": False, "error": "invalid_ops"}}))
                     else:
@@ -225,7 +280,8 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
                                     await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": {"ok": False, "error": "patch_apply", "details": str(e)}}))
                                     patched = None
                                 if isinstance(patched, dict):
-                                    res = conductor.do_replace_json(conductor.doc_version, patched)
+                                    structural = conductor._is_structural_ops(ops)
+                                    res = conductor._schedule_or_apply(conductor.doc_version, patched, structural=structural, apply_now=apply_now)
                                     if res.get("ok"):
                                         await ws.send(json.dumps({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()}))
                                     else:

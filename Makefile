@@ -40,6 +40,18 @@ play-external:
 conductor-run:
 	@$(PY) -m conductor.conductor_server --loop $(LOOP) --port "$(PORT)" --bpm $(BPM) --ws-host 127.0.0.1 --ws-port 8765
 
+.PHONY: ws-play ws-stop ws-continue ws-tempo ws-patch-vel
+ws-play:
+	@$(PY) tools/wsctl.py --url ws://127.0.0.1:8765 play
+ws-stop:
+	@$(PY) tools/wsctl.py --url ws://127.0.0.1:8765 stop
+ws-continue:
+	@$(PY) tools/wsctl.py --url ws://127.0.0.1:8765 continue
+ws-tempo:
+	@$(PY) tools/wsctl.py --url ws://127.0.0.1:8765 tempo --bpm $(BPM)
+ws-patch-vel:
+	@$(PY) tools/wsctl.py --url ws://127.0.0.1:8765 patch-vel --velocity $(VEL) $(APPLYNOW)
+
 .PHONY: play-cc-lfo-internal
 play-cc-lfo-internal:
 	@$(PY) -m conductor.play_local conductor/tests/fixtures/loop-cc-lfo.json --mode internal --bpm $(BPM) --port "$(PORT)"
