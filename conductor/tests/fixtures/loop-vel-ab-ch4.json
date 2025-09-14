@@ -1,0 +1,23 @@
+{
+  "version": "opxyloop-1.0",
+  "meta": { "tempo": 100, "ppq": 96, "stepsPerBar": 16 },
+  "deviceProfile": { "portName": "OP-XY" },
+  "tracks": [
+    {
+      "id": "t5",
+      "name": "Vel AB Track5",
+      "type": "sampler",
+      "midiChannel": 4,
+      "pattern": {
+        "lengthBars": 2,
+        "steps": [
+          { "idx": 0,  "events": [{ "pitch": 60, "velocity": 127, "lengthSteps": 8 }] },
+          { "idx": 8,  "events": [{ "pitch": 60, "velocity": 127, "lengthSteps": 8 }] },
+          { "idx": 16, "events": [{ "pitch": 60, "velocity": 1,   "lengthSteps": 8 }] },
+          { "idx": 24, "events": [{ "pitch": 60, "velocity": 1,   "lengthSteps": 8 }] }
+        ]
+      }
+    }
+  ]
+}
+

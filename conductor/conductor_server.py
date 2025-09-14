@@ -68,10 +68,10 @@ class Conductor:
             except Exception:
                 pass
 
-        self.clock = InternalClock(bpm=bpm, tick_handler=on_clock_pulse, send_midi_clock=send_midi_clock)
-        self.clock.start()
         # Pending structural doc replace (apply at next bar boundary)
         self._pending_doc: Optional[Dict[str, Any]] = None
+        self.clock = InternalClock(bpm=bpm, tick_handler=on_clock_pulse, send_midi_clock=send_midi_clock)
+        self.clock.start()
 
     # --- State/doc ---
     def get_state(self) -> Dict[str, Any]:
@@ -114,6 +114,11 @@ class Conductor:
             if not self.playing:
                 self.engine.start()
                 self.playing = True
+                # Emit tick 0 (or current tick) immediately to avoid missing step-0 events
+                try:
+                    self.engine.on_tick(self.engine.tick)
+                except Exception:
+                    pass
 
     def do_continue(self) -> None:
         # Same as play for MVP; tick preserved
@@ -231,7 +236,7 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
             except Exception:
                 pass
 
-    async def handler(ws, path):
+    async def handler(ws, *args):
         clients.add(ws)
         # Send initial doc/state
         await ws.send(json.dumps({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()}))
