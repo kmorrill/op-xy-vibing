@@ -204,6 +204,11 @@ Policy:
   - Verify: Real-device smoke `make play-cc-lfo-ch0 PORT='OP-XY' BPM=60 METRICS=--metrics --` ends with no stuck notes.
   - Pickup: Conductor WS skeleton next; ensure panic wired to transport Stop in that process as well.
   - Context: changes on `main`.
+- [2025-09-14T01:25:00Z] M3f – Conductor WS Skeleton
+  - Completed: Minimal Conductor (`conductor/conductor_server.py`) serving `doc/state/metrics` over WS; accepts `play/stop/continue/setTempo/replaceJSON`; atomic file writes; engine panic wired to Stop; `make conductor-run` target.
+  - Verify: `make test` (12 tests green); run `make conductor-run LOOP=conductor/tests/fixtures/loop-cc-lfo-ch0.json PORT='OP-XY' BPM=60` then connect a WS client to ws://127.0.0.1:8765; send `{"type":"play"}` and observe playback and metrics; send `{"type":"stop"}` and verify no stuck notes.
+  - Pickup: Add `applyPatch` (RFC 6902) gate; include `state.barBeatTick`; include SHA-256 of canonical JSON in `doc`; basic auth/hooks for UI.
+  - Context: changes on `main`.
 - [2025-09-13T17:20:00Z] M2.5 – Local OP‑XY Player (real device)
   - Completed: Added `conductor/play_local.py` (internal/external clock), `conductor/midi_out.py` (MIDI sink via mido), `conductor/clock.py`; Makefile `play-internal` / `play-external`; `requirements.txt` (mido + python-rtmidi).
   - Verify: With OP‑XY connected, `pip install -r requirements.txt`, then `make play-internal LOOP=conductor/tests/fixtures/loop-drum-accent.json PORT='OP-XY' BPM=120` (OP‑XY should follow and play drums). For external, set OP‑XY as master and run `make play-external ...` and press Play on device.
