@@ -42,15 +42,9 @@ conductor-run:
 
 .PHONY: ui-serve
 ui-serve:
-	@cd ui && $(PY) -m http.server 8080
+	@cd ui && $(PY) -m http.server 8080 --bind 127.0.0.1
 
-.PHONY: ws-play ws-stop ws-continue ws-tempo ws-patch-vel
-ws-play:
-	@$(PY) tools/wsctl.py --url ws://127.0.0.1:8765 play
-ws-stop:
-	@$(PY) tools/wsctl.py --url ws://127.0.0.1:8765 stop
-ws-continue:
-	@$(PY) tools/wsctl.py --url ws://127.0.0.1:8765 continue
+.PHONY: ws-tempo ws-patch-vel
 ws-tempo:
 	@$(PY) tools/wsctl.py --url ws://127.0.0.1:8765 tempo --bpm $(BPM)
 ws-patch-vel:
@@ -99,3 +93,6 @@ play-vel-ab-ch1-d3:
 .PHONY: play-vel-alt-ch1-d3
 play-vel-alt-ch1-d3:
 	@$(PY) -m conductor.play_local conductor/tests/fixtures/loop-vel-alt-ch1-d3.json --mode internal --bpm $(BPM) --port "$(PORT)" --loops $(LOOPS)
+.PHONY: proto-run
+proto-run:
+	@.venv/bin/python -m prototype.server --file test.json --ws-port 8765 --http-port 8080

@@ -8,18 +8,14 @@ import json
 async def run(url: str, cmd: str, args: argparse.Namespace):
     import websockets  # type: ignore
 
-    async with websockets.connect(url) as ws:
+    connect_url = url
+    async with websockets.connect(connect_url) as ws:
         # Read initial doc/state
         init1 = json.loads(await ws.recv())
         init2 = json.loads(await ws.recv())
         doc = init1["payload"] if init1.get("type") == "doc" else init2["payload"]
         doc_version = int(doc.get("docVersion", 0))
-        if cmd == "play":
-            await ws.send(json.dumps({"type": "play"}))
-        elif cmd == "stop":
-            await ws.send(json.dumps({"type": "stop"}))
-        elif cmd == "continue":
-            await ws.send(json.dumps({"type": "continue"}))
+        # Transport is device-controlled; do not send play/stop/continue
         elif cmd == "tempo":
             await ws.send(json.dumps({"type": "setTempo", "bpm": float(args.bpm)}))
         elif cmd == "patch-vel":
@@ -41,9 +37,7 @@ def main():
     ap = argparse.ArgumentParser(description="Simple WS controller for Conductor")
     ap.add_argument("--url", default="ws://127.0.0.1:8765")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("play")
-    sub.add_parser("stop")
-    sub.add_parser("continue")
+    # Transport commands removed: device is transport authority
     p_tempo = sub.add_parser("tempo"); p_tempo.add_argument("--bpm", required=True)
     p_patch = sub.add_parser("patch-vel"); p_patch.add_argument("--velocity", required=True); p_patch.add_argument("--apply-now", action="store_true")
     p_replace = sub.add_parser("replace"); p_replace.add_argument("--doc", required=True); p_replace.add_argument("--apply-now", action="store_true")
@@ -53,4 +47,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
