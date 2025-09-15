@@ -93,6 +93,3 @@ play-vel-ab-ch1-d3:
 .PHONY: play-vel-alt-ch1-d3
 play-vel-alt-ch1-d3:
 	@$(PY) -m conductor.play_local conductor/tests/fixtures/loop-vel-alt-ch1-d3.json --mode internal --bpm $(BPM) --port "$(PORT)" --loops $(LOOPS)
-.PHONY: proto-run
-proto-run:
-	@.venv/bin/python -m prototype.server --file test.json --ws-port 8765 --http-port 8080

@@ -16,7 +16,7 @@ async def run(url: str, cmd: str, args: argparse.Namespace):
         doc = init1["payload"] if init1.get("type") == "doc" else init2["payload"]
         doc_version = int(doc.get("docVersion", 0))
         # Transport is device-controlled; do not send play/stop/continue
-        elif cmd == "tempo":
+        if cmd == "tempo":
             await ws.send(json.dumps({"type": "setTempo", "bpm": float(args.bpm)}))
         elif cmd == "patch-vel":
             ops = [{"op": "replace", "path": "/tracks/0/pattern/steps/0/events/0/velocity", "value": int(args.velocity)}]

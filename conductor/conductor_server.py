@@ -14,7 +14,6 @@ from conductor.clock import InternalClock
 from conductor.midi_engine import Engine
 from conductor.midi_out import MidoSink, open_mido_output, open_mido_input
 from conductor.validator import validate_loop, canonicalize
-from conductor.ws_server import start_ws_server
 from conductor.patch_utils import apply_patch as apply_json_patch
 from conductor.tempo_map import bpm_to_cc80
 
@@ -68,11 +67,6 @@ class Conductor:
         self.loop_path = loop_path
         self.doc: Dict[str, Any] = _load_json(loop_path)
         self.doc_version = int(self.doc.get("docVersion", 0))
-        # Track file mtime to detect external edits
-        try:
-            self._file_mtime = os.path.getmtime(self.loop_path)
-        except Exception:
-            self._file_mtime = time.time()
         # Track file mtime to detect external edits
         try:
             self._file_mtime = os.path.getmtime(self.loop_path)
