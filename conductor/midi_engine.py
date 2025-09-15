@@ -169,26 +169,33 @@ class Engine:
                 if (tick % (bar_ticks * length_bars)) == step_tick:
                     events = st.get("events", [])
                     for e in events:
-                        pitch = e.get("pitch")
-                        if pitch is None:
-                            # For MVP engine skeleton, only absolute pitch is supported in tests.
-                            continue
+                        # Support: absolute pitch or chord string
                         vel = int(e.get("velocity", 100))
                         ls = int(e.get("lengthSteps", 1))
                         gate = float(e.get("gate", 1.0))
                         length_ticks = max(1, int(self.step_ticks * ls * gate))
                         on_tick = tick
                         off_tick = tick + length_ticks
-                        note_id = self._next_note_id
-                        self._next_note_id += 1
-                        # Emit Note On
-                        self.sink.note_on(ch, int(pitch), vel)
-                        self.metrics["msgs_note_on"] += 1
-                        # Push to active ledger (stack semantics for overlaps)
-                        key = (ch, int(pitch))
-                        self.active.setdefault(key, []).append(
-                            NoteEvent(channel=ch, pitch=int(pitch), velocity=vel, on_tick=on_tick, off_tick=off_tick, note_id=note_id)
-                        )
+
+                        pitches: List[int] = []
+                        if "pitch" in e and isinstance(e.get("pitch"), (int, float)):
+                            pitches = [int(e.get("pitch"))]
+                        elif isinstance(e.get("chord"), str):
+                            pitches = self._expand_chord(e.get("chord"), e)
+                        else:
+                            # degree support not yet implemented in engine (reserved)
+                            continue
+
+                        for p in pitches:
+                            pitch = max(0, min(127, int(p)))
+                            note_id = self._next_note_id
+                            self._next_note_id += 1
+                            self.sink.note_on(ch, pitch, vel)
+                            self.metrics["msgs_note_on"] += 1
+                            key = (ch, pitch)
+                            self.active.setdefault(key, []).append(
+                                NoteEvent(channel=ch, pitch=pitch, velocity=vel, on_tick=on_tick, off_tick=off_tick, note_id=note_id)
+                            )
 
             # drumKit runtime scheduling
             dk = tr.get("drumKit")
@@ -482,3 +489,113 @@ class Engine:
                 except Exception:
                     # treat as shed if send fails
                     self.metrics["shed_cc"] += 1
+
+    # --- Helpers: chord expansion ---
+    @staticmethod
+    def _note_name_to_midi(name: str) -> int | None:
+        """Parse a note name like 'C3' or 'G#4' -> MIDI number. Returns None if invalid.
+
+        Assumes C4 = 60.
+        """
+        if not isinstance(name, str) or len(name) < 2:
+            return None
+        name = name.strip()
+        letter = name[0].upper()
+        if letter not in "CDEFGAB":
+            return None
+        i = 1
+        accidental = 0
+        if i < len(name) and name[i] in ("#", "b"):
+            accidental = 1 if name[i] == "#" else -1
+            i += 1
+        try:
+            octave = int(name[i:])
+        except Exception:
+            return None
+        semitones = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}[letter]
+        return 12 * (octave + 1) + semitones + accidental  # MIDI: C-1 = 0
+
+    @staticmethod
+    def _parse_chord_symbol(sym: str) -> tuple[int, List[int]] | None:
+        """Very small chord parser for absolute symbols like 'Cmaj7', 'Am', 'G7', 'Dsus4'.
+
+        Returns (root_midi_base, intervals). The root midi base is at octave 3 (C3=48).
+        Intervals are semitone offsets from the root.
+        """
+        if not isinstance(sym, str) or len(sym) < 1:
+            return None
+        s = sym.strip()
+        # Root
+        root_letter = s[0].upper()
+        if root_letter not in "CDEFGAB":
+            return None
+        idx = 1
+        accidental = 0
+        if idx < len(s) and s[idx] in ("#", "b"):
+            accidental = 1 if s[idx] == "#" else -1
+            idx += 1
+        qual = s[idx:].lower()
+        # Map of quality -> intervals
+        triads = {
+            "": [0, 4, 7],
+            "maj": [0, 4, 7],
+            "m": [0, 3, 7],
+            "min": [0, 3, 7],
+            "dim": [0, 3, 6],
+            "sus2": [0, 2, 7],
+            "sus4": [0, 5, 7],
+        }
+        sevenths = {
+            "7": [0, 4, 7, 10],
+            "maj7": [0, 4, 7, 11],
+            "m7": [0, 3, 7, 10],
+            "min7": [0, 3, 7, 10],
+        }
+        intervals: List[int] | None = None
+        # exact match quality
+        if qual in triads:
+            intervals = triads[qual]
+        elif qual in sevenths:
+            intervals = sevenths[qual]
+        else:
+            # Try to strip common suffixes
+            for k, iv in list(sevenths.items()) + list(triads.items()):
+                if qual == k:
+                    intervals = iv; break
+            # Fallback: treat unknown quality as major triad
+            if intervals is None:
+                intervals = triads[""]
+        root_pc = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}[root_letter] + accidental
+        root_base = 48 + root_pc  # C3 base
+        return root_base, intervals
+
+    def _expand_chord(self, sym: str, event: Dict[str, Any]) -> List[int]:
+        """Expand chord string to MIDI pitches. MVP: absolute chord symbols only.
+
+        Honors optional 'register': [low, high] note names to clamp/increase octaves.
+        Ignores inversion/omit/roll for MVP.
+        """
+        out: List[int] = []
+        parsed = self._parse_chord_symbol(sym)
+        if not parsed:
+            return out
+        base, intervals = parsed
+        # Optional register bounds
+        low = None; high = None
+        reg = event.get("register")
+        if isinstance(reg, list) and len(reg) == 2:
+            low = self._note_name_to_midi(str(reg[0]))
+            high = self._note_name_to_midi(str(reg[1]))
+        for iv in intervals:
+            p = base + int(iv)
+            # Keep within register by nudging octaves
+            if low is not None and p < low:
+                while p < low:
+                    p += 12
+            if high is not None and p > high:
+                while p > high:
+                    p -= 12
+            out.append(p)
+        # Ensure ascending order for determinism
+        out.sort()
+        return out

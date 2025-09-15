@@ -34,6 +34,88 @@
   },
   "tracks": [
     {
+      "id": "t-bass",
+      "name": "Bass",
+      "type": "synth",
+      "role": "bass",
+      "midiChannel": 2,
+      "pattern": {
+        "lengthBars": 2,
+        "steps": [
+          {
+            "idx": 0,
+            "events": [
+              {
+                "pitch": 40,
+                "velocity": 105,
+                "lengthSteps": 4
+              }
+            ]
+          },
+          {
+            "idx": 2,
+            "events": [
+              {
+                "pitch": 40,
+                "velocity": 100,
+                "lengthSteps": 1
+              }
+            ]
+          },
+          {
+            "idx": 3,
+            "events": [
+              {
+                "pitch": 40,
+                "velocity": 100,
+                "lengthSteps": 1
+              }
+            ]
+          },
+          {
+            "idx": 4,
+            "events": [
+              {
+                "pitch": 40,
+                "velocity": 100,
+                "lengthSteps": 1
+              }
+            ]
+          },
+          {
+            "idx": 6,
+            "events": [
+              {
+                "pitch": 40,
+                "velocity": 100,
+                "lengthSteps": 1
+              }
+            ]
+          },
+          {
+            "idx": 16,
+            "events": [
+              {
+                "pitch": 45,
+                "velocity": 105,
+                "lengthSteps": 4
+              }
+            ]
+          },
+          {
+            "idx": 24,
+            "events": [
+              {
+                "pitch": 43,
+                "velocity": 100,
+                "lengthSteps": 4
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "t-drums",
       "name": "Drum Kit",
       "type": "sampler",
@@ -65,6 +147,12 @@
           },
           {
             "bar": 1,
+            "key": "cowbell",
+            "pattern": "................",
+            "vel": 105
+          },
+          {
+            "bar": 1,
             "key": "crash",
             "pattern": "................",
             "vel": 100
@@ -92,16 +180,24 @@
             "key": "snare",
             "pattern": "................",
             "vel": 110
-          },
-          {
-            "bar": 1,
-            "key": "cowbell",
-            "pattern": "x.xxx.xxx.xxx.xx",
-            "vel": 105
           }
+        ]
+      }
+    },
+    {
+      "id": "t-chords",
+      "name": "Chords",
+      "type": "synth",
+      "role": "pad",
+      "midiChannel": 6,
+      "pattern": {
+        "lengthBars": 2,
+        "steps": [
+          { "idx": 0,  "events": [ { "chord": "Cmaj7", "velocity": 96, "lengthSteps": 8 } ] },
+          { "idx": 8,  "events": [ { "chord": "G7",    "velocity": 96, "lengthSteps": 8 } ] }
         ]
       }
     }
   ],
-  "docVersion": 24
+  "docVersion": 36
 }
