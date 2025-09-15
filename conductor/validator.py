@@ -184,6 +184,19 @@ def validate_loop(loop: Dict[str, Any]) -> List[str]:
                         mode = lane.get("mode")
                         if mode not in ("points", "hold", "ramp"):
                             _err(errors, lpath + "/mode", "must be 'points'|'hold'|'ramp'")
+                        if "channel" in lane:
+                            chv = lane.get("channel")
+                            if not isinstance(chv, int) or not (0 <= chv <= 15):
+                                _err(errors, lpath + "/channel", "integer 0..15 required when present")
+                        if "range" in lane:
+                            rng = lane.get("range")
+                            ok = isinstance(rng, list) and len(rng) == 2 and all(isinstance(v, (int, float)) for v in rng)
+                            if ok:
+                                lo, hi = int(rng[0]), int(rng[1])
+                                if not (0 <= lo <= 127 and 0 <= hi <= 127 and lo <= hi):
+                                    ok = False
+                            if not ok:
+                                _err(errors, lpath + "/range", "must be [lo,hi] with 0..127 and lo<=hi")
                         points = lane.get("points")
                         if not isinstance(points, list) or len(points) == 0:
                             _err(errors, lpath + "/points", "required non-empty array")
@@ -199,6 +212,24 @@ def validate_loop(loop: Dict[str, Any]) -> List[str]:
                                     _err(errors, ppath + "/v", "0..127 required")
                                 if not isinstance(t, dict) or not ("ticks" in t or ("bar" in t and "step" in t)):
                                     _err(errors, ppath + "/t", "must be {ticks:n} or {bar:n, step:n}")
+                                curve = pt.get("curve")
+                                if curve is not None and not (isinstance(curve, str) and curve in ("linear", "line", "exp", "exponential", "log", "logarithmic", "s-curve", "scurve", "smoothstep")):
+                                    _err(errors, ppath + "/curve", "must be one of 'linear'|'exp'|'log'|'s-curve' if present")
+                                if isinstance(t, dict):
+                                    if "ticks" in t:
+                                        if not isinstance(t["ticks"], (int, float)) or int(t["ticks"]) < 0:
+                                            _err(errors, ppath + "/t/ticks", "non-negative number required")
+                                    else:
+                                        bar = t.get("bar"); step = t.get("step")
+                                        if not isinstance(bar, (int, float)) or int(bar) < 0:
+                                            _err(errors, ppath + "/t/bar", "non-negative number required")
+                                        if not isinstance(step, (int, float)):
+                                            _err(errors, ppath + "/t/step", "number required")
+                                        else:
+                                            if isinstance(meta.get("stepsPerBar"), int):
+                                                spb_val = int(meta.get("stepsPerBar"))
+                                                if not (0 <= int(step) < spb_val):
+                                                    _err(errors, ppath + "/t/step", f"must be in 0..{spb_val-1}")
 
             # §7: lfos (optional)
             lfos = tr.get("lfos")
@@ -222,9 +253,65 @@ def validate_loop(loop: Dict[str, Any]) -> List[str]:
                         rate = lfo.get("rate")
                         if not isinstance(rate, dict) or not ("sync" in rate or "hz" in rate):
                             _err(errors, lpath + "/rate", "must be {sync:""}|{hz:n}")
+                        else:
+                            if "hz" in rate:
+                                if not isinstance(rate.get("hz"), (int, float)) or float(rate.get("hz", 0)) <= 0:
+                                    _err(errors, lpath + "/rate/hz", "number > 0 required")
+                            if "sync" in rate:
+                                if not isinstance(rate.get("sync"), str) or not rate.get("sync"):
+                                    _err(errors, lpath + "/rate/sync", "non-empty string required")
                         shape = lfo.get("shape")
                         if shape not in ("sine", "triangle", "saw", "ramp", "square", "samplehold"):
                             _err(errors, lpath + "/shape", "invalid shape")
+                        if "channel" in lfo:
+                            chv = lfo.get("channel")
+                            if not isinstance(chv, int) or not (0 <= chv <= 15):
+                                _err(errors, lpath + "/channel", "integer 0..15 required when present")
+                        if "offset" in lfo:
+                            off = lfo.get("offset")
+                            if not isinstance(off, int) or not (0 <= off <= 127):
+                                _err(errors, lpath + "/offset", "integer 0..127 required when present")
+                        if "phase" in lfo:
+                            ph = lfo.get("phase")
+                            if not isinstance(ph, (int, float)) or not (0.0 <= float(ph) <= 1.0):
+                                _err(errors, lpath + "/phase", "number 0..1 required when present")
+                        if "fadeMs" in lfo:
+                            fm = lfo.get("fadeMs")
+                            if not isinstance(fm, int) or fm < 0:
+                                _err(errors, lpath + "/fadeMs", "integer ≥0 required when present")
+                        if "stereoSpread" in lfo:
+                            ss = lfo.get("stereoSpread")
+                            if not isinstance(ss, (int, float)) or not (0.0 <= float(ss) <= 1.0):
+                                _err(errors, lpath + "/stereoSpread", "number 0..1 required when present")
+                        if "on" in lfo:
+                            wins = lfo.get("on")
+                            if not isinstance(wins, list):
+                                _err(errors, lpath + "/on", "must be array if present")
+                            else:
+                                for wi, w in enumerate(wins):
+                                    wpath = f"{lpath}/on[{wi}]"
+                                    if not isinstance(w, dict):
+                                        _err(errors, wpath, "must be object")
+                                        continue
+                                    fr = w.get("from"); to = w.get("to")
+                                    for lab, tref in (("from", fr), ("to", to)):
+                                        if not isinstance(tref, dict) or not ("ticks" in tref or ("bar" in tref and "step" in tref)):
+                                            _err(errors, wpath + f"/{lab}", "must be {ticks:n} or {bar:n, step:n}")
+                                        else:
+                                            if "ticks" in tref:
+                                                if not isinstance(tref["ticks"], (int, float)) or int(tref["ticks"]) < 0:
+                                                    _err(errors, wpath + f"/{lab}/ticks", "non-negative number required")
+                                            else:
+                                                b = tref.get("bar"); s = tref.get("step")
+                                                if not isinstance(b, (int, float)) or int(b) < 0:
+                                                    _err(errors, wpath + f"/{lab}/bar", "non-negative number required")
+                                                if not isinstance(s, (int, float)):
+                                                    _err(errors, wpath + f"/{lab}/step", "number required")
+                                                else:
+                                                    if isinstance(meta.get("stepsPerBar"), int):
+                                                        spb_val = int(meta.get("stepsPerBar"))
+                                                        if not (0 <= int(s) < spb_val):
+                                                            _err(errors, wpath + f"/{lab}/step", f"must be in 0..{spb_val-1}")
 
     return errors
 
@@ -319,4 +406,3 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

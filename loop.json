@@ -1,1308 +1,225 @@
 {
   "version": "opxyloop-1.0",
-  "meta": {
-    "tempo": 125,
-    "ppq": 96,
-    "stepsPerBar": 16,
-    "key": "C",
-    "mode": "minor"
-  },
-  "deviceProfile": {
-    "portName": "OP-XY",
-    "drumMap": {
-      "kick": 53,
-      "snare": 55,
-      "clap": 58,
-      "closed_hat": 61,
-      "open_hat": 62,
-      "low_tom": 65,
-      "crash": 66,
-      "mid_tom": 67,
-      "ride": 68,
-      "high_tom": 69,
-      "shaker": 60
-    }
-  },
+  "meta": { "tempo": 120, "ppq": 96, "stepsPerBar": 16 },
+  "deviceProfile": { "portName": "OP-XY" },
   "tracks": [
     {
-      "id": "t-drums-house",
-      "name": "House Drums (chorus)",
-      "type": "sampler",
-      "midiChannel": 0,
-      "role": "drums",
-      "drumKit": {
-        "patterns": [
-          {
-            "bar": 1,
-            "key": "kick",
-            "pattern": "x...x...x...x...",
-            "vel": 122,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 1,
-            "key": "clap",
-            "pattern": "....x.......x...",
-            "vel": 118,
-            "lengthSteps": 1,
-            "repeatBars": 7
-          },
-          {
-            "bar": 1,
-            "key": "snare",
-            "pattern": "....x.......x...",
-            "vel": 96,
-            "lengthSteps": 1,
-            "repeatBars": 7
-          },
-          {
-            "bar": 5,
-            "key": "crash",
-            "pattern": "x...............",
-            "vel": 120,
-            "lengthSteps": 4
-          },
-          {
-            "bar": 8,
-            "key": "snare",
-            "pattern": "............xxxx",
-            "vel": 110,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 8,
-            "key": "low_tom",
-            "pattern": "............x...",
-            "vel": 108,
-            "lengthSteps": 2
-          },
-          {
-            "bar": 8,
-            "key": "mid_tom",
-            "pattern": ".............x..",
-            "vel": 108,
-            "lengthSteps": 2
-          },
-          {
-            "bar": 8,
-            "key": "high_tom",
-            "pattern": "..............x.",
-            "vel": 108,
-            "lengthSteps": 2
-          },
-          {
-            "bar": 8,
-            "key": "ride",
-            "pattern": ".x.x.x.x.x.x.x.x",
-            "vel": 88,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 1,
-            "key": "closed_hat",
-            "pattern": "..x...x...x...x.",
-            "vel": 70,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 3,
-            "key": "closed_hat",
-            "pattern": "..x...x...x...x.",
-            "vel": 70,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 5,
-            "key": "closed_hat",
-            "pattern": "..x...x...x...x.",
-            "vel": 70,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 7,
-            "key": "closed_hat",
-            "pattern": "..x...x...x...x.",
-            "vel": 70,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 2,
-            "key": "closed_hat",
-            "pattern": ".x.x.x.x.x.x.x.x",
-            "vel": 74,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 4,
-            "key": "closed_hat",
-            "pattern": ".x.x.x.x.x.x.x.x",
-            "vel": 74,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 6,
-            "key": "closed_hat",
-            "pattern": ".x.x.x.x.x.x.x.x",
-            "vel": 74,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 8,
-            "key": "closed_hat",
-            "pattern": "..x...x...x...x.",
-            "vel": 70,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 2,
-            "key": "open_hat",
-            "pattern": "..x...x...x...x.",
-            "vel": 102,
-            "lengthSteps": 2
-          },
-          {
-            "bar": 4,
-            "key": "open_hat",
-            "pattern": "..x...x...x...x.",
-            "vel": 102,
-            "lengthSteps": 2
-          },
-          {
-            "bar": 6,
-            "key": "open_hat",
-            "pattern": "..x...x...x...x.",
-            "vel": 102,
-            "lengthSteps": 2
-          },
-          {
-            "bar": 8,
-            "key": "open_hat",
-            "pattern": "..x...x...x...x.",
-            "vel": 102,
-            "lengthSteps": 2
-          },
-          {
-            "bar": 1,
-            "key": "shaker",
-            "pattern": "..............x.",
-            "vel": 92,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 3,
-            "key": "shaker",
-            "pattern": "..............x.",
-            "vel": 92,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 5,
-            "key": "shaker",
-            "pattern": "..............x.",
-            "vel": 92,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 7,
-            "key": "shaker",
-            "pattern": "..............x.",
-            "vel": 92,
-            "lengthSteps": 1
-          },
-          {
-            "bar": 7,
-            "key": "clap",
-            "pattern": "...............x",
-            "vel": 120,
-            "lengthSteps": 1
-          }
-        ],
-        "repeatBars": 7,
-        "lengthSteps": 1
-      },
-      "pattern": {
-        "lengthBars": 8,
-        "steps": []
-      }
-    },
-    {
-      "id": "t-arp",
-      "name": "Arp Accent (track 5)",
-      "type": "synth",
+      "id": "t5-auto",
+      "name": "OP-XY Track 5 Automation",
+      "type": "axis",
       "midiChannel": 4,
-      "role": "arp",
+      "role": "keys",
       "pattern": {
-        "lengthBars": 8,
+        "lengthBars": 29,
         "steps": [
-          {
-            "idx": 28,
-            "events": [
-              {
-                "degree": 1,
-                "octaveOffset": 1,
-                "velocity": 92,
-                "lengthSteps": 1,
-                "gate": 0.8,
-                "microshiftMs": 3
-              }
-            ]
-          },
-          {
-            "idx": 29,
-            "events": [
-              {
-                "degree": 3,
-                "octaveOffset": 1,
-                "velocity": 94,
-                "lengthSteps": 1,
-                "gate": 0.8
-              }
-            ]
-          },
-          {
-            "idx": 30,
-            "events": [
-              {
-                "degree": 5,
-                "octaveOffset": 1,
-                "velocity": 96,
-                "lengthSteps": 1,
-                "gate": 0.8
-              }
-            ]
-          },
-          {
-            "idx": 31,
-            "events": [
-              {
-                "degree": 7,
-                "octaveOffset": 1,
-                "velocity": 98,
-                "lengthSteps": 1,
-                "gate": 0.8,
-                "microshiftMs": 4
-              }
-            ]
-          },
-          {
-            "idx": 60,
-            "events": [
-              {
-                "degree": 6,
-                "octaveOffset": 1,
-                "velocity": 90,
-                "lengthSteps": 1,
-                "gate": 0.78
-              }
-            ]
-          },
-          {
-            "idx": 61,
-            "events": [
-              {
-                "degree": 1,
-                "octaveOffset": 2,
-                "velocity": 92,
-                "lengthSteps": 1,
-                "gate": 0.78
-              }
-            ]
-          },
-          {
-            "idx": 62,
-            "events": [
-              {
-                "degree": 3,
-                "octaveOffset": 2,
-                "velocity": 94,
-                "lengthSteps": 1,
-                "gate": 0.78
-              }
-            ]
-          },
-          {
-            "idx": 63,
-            "events": [
-              {
-                "degree": 5,
-                "octaveOffset": 2,
-                "velocity": 96,
-                "lengthSteps": 1,
-                "gate": 0.78,
-                "microshiftMs": 3
-              }
-            ]
-          },
-          {
-            "idx": 92,
-            "events": [
-              {
-                "degree": 7,
-                "octaveOffset": 1,
-                "velocity": 90,
-                "lengthSteps": 1,
-                "gate": 0.78
-              }
-            ]
-          },
-          {
-            "idx": 93,
-            "events": [
-              {
-                "degree": 2,
-                "octaveOffset": 2,
-                "velocity": 92,
-                "lengthSteps": 1,
-                "gate": 0.78
-              }
-            ]
-          },
-          {
-            "idx": 94,
-            "events": [
-              {
-                "degree": 4,
-                "octaveOffset": 2,
-                "velocity": 94,
-                "lengthSteps": 1,
-                "gate": 0.78
-              }
-            ]
-          },
-          {
-            "idx": 95,
-            "events": [
-              {
-                "degree": 6,
-                "octaveOffset": 2,
-                "velocity": 96,
-                "lengthSteps": 1,
-                "gate": 0.78,
-                "microshiftMs": 3
-              }
-            ]
-          },
-          {
-            "idx": 124,
-            "events": [
-              {
-                "degree": 1,
-                "octaveOffset": 2,
-                "velocity": 96,
-                "lengthSteps": 1,
-                "gate": 0.8
-              }
-            ]
-          },
-          {
-            "idx": 125,
-            "events": [
-              {
-                "degree": 2,
-                "octaveOffset": 2,
-                "velocity": 98,
-                "lengthSteps": 1,
-                "gate": 0.8
-              }
-            ]
-          },
-          {
-            "idx": 126,
-            "events": [
-              {
-                "degree": 3,
-                "octaveOffset": 2,
-                "velocity": 100,
-                "lengthSteps": 1,
-                "gate": 0.8
-              }
-            ]
-          },
-          {
-            "idx": 127,
-            "events": [
-              {
-                "degree": 5,
-                "octaveOffset": 2,
-                "velocity": 104,
-                "lengthSteps": 1,
-                "gate": 0.8,
-                "ratchet": 2
-              }
-            ]
-          }
+          { "idx": 0,    "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 16,   "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 32,   "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 48,   "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 64,   "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 80,   "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 96,   "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 112,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 128,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 144,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 160,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 176,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 192,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 208,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 224,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 240,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 256,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 272,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 288,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 304,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 320,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 336,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 352,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 368,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 384,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 400,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 416,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] },
+          { "idx": 432,  "events": [{ "pitch": 60, "velocity": 110, "lengthSteps": 16 }] }
         ]
-      }
-    },
-    {
-      "id": "t-bass",
-      "name": "Bass (track 3)",
-      "type": "synth",
-      "midiChannel": 2,
-      "role": "bass",
-      "pattern": {
-        "lengthBars": 8,
-        "steps": [
-          {
-            "idx": 2,
-            "events": [
-              {
-                "pitch": 36,
-                "velocity": 108,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 6,
-            "events": [
-              {
-                "pitch": 36,
-                "velocity": 108,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 10,
-            "events": [
-              {
-                "pitch": 36,
-                "velocity": 108,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 14,
-            "events": [
-              {
-                "pitch": 36,
-                "velocity": 108,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 18,
-            "events": [
-              {
-                "pitch": 36,
-                "velocity": 108,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 22,
-            "events": [
-              {
-                "pitch": 36,
-                "velocity": 108,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 26,
-            "events": [
-              {
-                "pitch": 36,
-                "velocity": 110,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 30,
-            "events": [
-              {
-                "pitch": 36,
-                "velocity": 110,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 34,
-            "events": [
-              {
-                "pitch": 44,
-                "velocity": 108,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 38,
-            "events": [
-              {
-                "pitch": 44,
-                "velocity": 108,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 42,
-            "events": [
-              {
-                "pitch": 44,
-                "velocity": 108,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 46,
-            "events": [
-              {
-                "pitch": 44,
-                "velocity": 110,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 50,
-            "events": [
-              {
-                "pitch": 44,
-                "velocity": 110,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 54,
-            "events": [
-              {
-                "pitch": 44,
-                "velocity": 110,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 58,
-            "events": [
-              {
-                "pitch": 44,
-                "velocity": 110,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 62,
-            "events": [
-              {
-                "pitch": 44,
-                "velocity": 112,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 66,
-            "events": [
-              {
-                "pitch": 46,
-                "velocity": 110,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 70,
-            "events": [
-              {
-                "pitch": 46,
-                "velocity": 110,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 74,
-            "events": [
-              {
-                "pitch": 46,
-                "velocity": 110,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 78,
-            "events": [
-              {
-                "pitch": 46,
-                "velocity": 112,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 82,
-            "events": [
-              {
-                "pitch": 46,
-                "velocity": 112,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 86,
-            "events": [
-              {
-                "pitch": 46,
-                "velocity": 112,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 90,
-            "events": [
-              {
-                "pitch": 46,
-                "velocity": 112,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 94,
-            "events": [
-              {
-                "pitch": 46,
-                "velocity": 114,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 98,
-            "events": [
-              {
-                "pitch": 43,
-                "velocity": 114,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 102,
-            "events": [
-              {
-                "pitch": 43,
-                "velocity": 114,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 106,
-            "events": [
-              {
-                "pitch": 43,
-                "velocity": 114,
-                "lengthSteps": 2
-              }
-            ]
-          },
-          {
-            "idx": 110,
-            "events": [
-              {
-                "pitch": 36,
-                "velocity": 116,
-                "lengthSteps": 1
-              }
-            ]
-          },
-          {
-            "idx": 111,
-            "events": [
-              {
-                "pitch": 38,
-                "velocity": 108,
-                "lengthSteps": 1
-              }
-            ]
-          },
-          {
-            "idx": 112,
-            "events": [
-              {
-                "pitch": 41,
-                "velocity": 108,
-                "lengthSteps": 1
-              }
-            ]
-          },
-          {
-            "idx": 113,
-            "events": [
-              {
-                "pitch": 43,
-                "velocity": 112,
-                "lengthSteps": 1
-              }
-            ]
-          },
-          {
-            "idx": 114,
-            "events": [
-              {
-                "pitch": 36,
-                "velocity": 118,
-                "lengthSteps": 2
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": "t-lead",
-      "name": "Lead (track 4)",
-      "type": "synth",
-      "midiChannel": 3,
-      "role": "lead",
-      "pattern": {
-        "lengthBars": 8,
-        "steps": [
-          {
-            "idx": 2,
-            "events": [
-              {
-                "degree": 5,
-                "octaveOffset": 1,
-                "velocity": 105,
-                "lengthSteps": 2,
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 6,
-            "events": [
-              {
-                "degree": 3,
-                "octaveOffset": 1,
-                "velocity": 102,
-                "lengthSteps": 2,
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 10,
-            "events": [
-              {
-                "degree": 1,
-                "octaveOffset": 1,
-                "velocity": 100,
-                "lengthSteps": 1,
-                "gate": 0.85
-              }
-            ]
-          },
-          {
-            "idx": 14,
-            "events": [
-              {
-                "degree": 5,
-                "octaveOffset": 2,
-                "velocity": 104,
-                "lengthSteps": 1,
-                "gate": 0.85,
-                "microshiftMs": 6
-              }
-            ]
-          },
-          {
-            "idx": 34,
-            "events": [
-              {
-                "degree": 6,
-                "octaveOffset": 1,
-                "velocity": 104,
-                "lengthSteps": 2,
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 38,
-            "events": [
-              {
-                "degree": 3,
-                "octaveOffset": 1,
-                "velocity": 102,
-                "lengthSteps": 2,
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 42,
-            "events": [
-              {
-                "degree": 1,
-                "octaveOffset": 1,
-                "velocity": 101,
-                "lengthSteps": 1,
-                "gate": 0.85
-              }
-            ]
-          },
-          {
-            "idx": 46,
-            "events": [
-              {
-                "degree": 5,
-                "octaveOffset": 1,
-                "velocity": 103,
-                "lengthSteps": 2,
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 66,
-            "events": [
-              {
-                "degree": 7,
-                "octaveOffset": 1,
-                "velocity": 104,
-                "lengthSteps": 2,
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 70,
-            "events": [
-              {
-                "degree": 4,
-                "octaveOffset": 1,
-                "velocity": 103,
-                "lengthSteps": 2,
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 74,
-            "events": [
-              {
-                "degree": 2,
-                "octaveOffset": 1,
-                "velocity": 102,
-                "lengthSteps": 2,
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 78,
-            "events": [
-              {
-                "degree": 6,
-                "octaveOffset": 1,
-                "velocity": 104,
-                "lengthSteps": 2,
-                "gate": 0.8,
-                "ratchet": 2
-              }
-            ]
-          },
-          {
-            "idx": 98,
-            "events": [
-              {
-                "degree": 5,
-                "octaveOffset": 1,
-                "velocity": 106,
-                "lengthSteps": 2,
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 102,
-            "events": [
-              {
-                "degree": 2,
-                "octaveOffset": 1,
-                "velocity": 104,
-                "lengthSteps": 2,
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 106,
-            "events": [
-              {
-                "degree": 4,
-                "octaveOffset": 1,
-                "velocity": 104,
-                "lengthSteps": 2,
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 110,
-            "events": [
-              {
-                "degree": 5,
-                "octaveOffset": 1,
-                "velocity": 108,
-                "lengthSteps": 1,
-                "gate": 0.85,
-                "ratchet": 2,
-                "microshiftMs": 5
-              }
-            ]
-          },
-          {
-            "idx": 112,
-            "events": [
-              {
-                "degree": 1,
-                "octaveOffset": 1,
-                "velocity": 108,
-                "lengthSteps": 1,
-                "gate": 0.85,
-                "microshiftMs": 6
-              }
-            ]
-          },
-          {
-            "idx": 113,
-            "events": [
-              {
-                "degree": 2,
-                "octaveOffset": 1,
-                "velocity": 108,
-                "lengthSteps": 1,
-                "gate": 0.85
-              }
-            ]
-          },
-          {
-            "idx": 114,
-            "events": [
-              {
-                "degree": 3,
-                "octaveOffset": 1,
-                "velocity": 110,
-                "lengthSteps": 1,
-                "gate": 0.85
-              }
-            ]
-          },
-          {
-            "idx": 115,
-            "events": [
-              {
-                "degree": 5,
-                "octaveOffset": 1,
-                "velocity": 112,
-                "lengthSteps": 1,
-                "gate": 0.85,
-                "ratchet": 2
-              }
-            ]
-          },
-          {
-            "idx": 118,
-            "events": [
-              {
-                "degree": 1,
-                "octaveOffset": 2,
-                "velocity": 110,
-                "lengthSteps": 2,
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 15,
-            "events": [
-              {
-                "degree": 7,
-                "octaveOffset": 1,
-                "velocity": 96,
-                "lengthSteps": 1,
-                "gate": 0.85,
-                "microshiftMs": 4
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": "t-chords7",
-      "name": "Chords (track 7)",
-      "type": "synth",
-      "midiChannel": 6,
-      "role": "pad",
-      "pattern": {
-        "lengthBars": 8,
-        "steps": [
-          {
-            "idx": 2,
-            "events": [
-              {
-                "chord": "Cm7",
-                "velocity": 94,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 10,
-            "events": [
-              {
-                "chord": "Cm7",
-                "velocity": 96,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 18,
-            "events": [
-              {
-                "chord": "Cm7",
-                "velocity": 94,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 26,
-            "events": [
-              {
-                "chord": "Cm7",
-                "velocity": 96,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 34,
-            "events": [
-              {
-                "chord": "Abmaj7",
-                "velocity": 94,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 42,
-            "events": [
-              {
-                "chord": "Abmaj7",
-                "velocity": 96,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 50,
-            "events": [
-              {
-                "chord": "Abmaj7",
-                "velocity": 94,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 58,
-            "events": [
-              {
-                "chord": "Abmaj7",
-                "velocity": 96,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 66,
-            "events": [
-              {
-                "chord": "Bbmaj7",
-                "velocity": 94,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 74,
-            "events": [
-              {
-                "chord": "Bbmaj7",
-                "velocity": 96,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 82,
-            "events": [
-              {
-                "chord": "Bbmaj7",
-                "velocity": 94,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 90,
-            "events": [
-              {
-                "chord": "Bbmaj7",
-                "velocity": 96,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 98,
-            "events": [
-              {
-                "chord": "G7",
-                "velocity": 96,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 106,
-            "events": [
-              {
-                "chord": "G7",
-                "velocity": 98,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.9
-              }
-            ]
-          },
-          {
-            "idx": 114,
-            "events": [
-              {
-                "chord": "Cm7",
-                "velocity": 100,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.95,
-                "microshiftMs": 6
-              }
-            ]
-          },
-          {
-            "idx": 122,
-            "events": [
-              {
-                "chord": "Cm7",
-                "velocity": 102,
-                "lengthSteps": 2,
-                "register": [
-                  "C3",
-                  "B4"
-                ],
-                "gate": 0.95,
-                "microshiftMs": 10
-              }
-            ]
-          }
-        ]
-      }
+      },
+      "ccLanes": [
+        { "id": "b01-track_volume", "dest": "name:track_volume", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64, "curve": "linear" },
+          { "t": { "bar": 0,  "step": 0 },  "v": 30, "curve": "linear" },
+          { "t": { "bar": 0,  "step": 15 }, "v": 110, "curve": "linear" },
+          { "t": { "bar": 1,  "step": 0 },  "v": 64, "curve": "linear" }
+        ]},
+        { "id": "b02-track_mute", "dest": "name:track_mute", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 1,  "step": 0 },  "v": 30 },
+          { "t": { "bar": 1,  "step": 15 }, "v": 110 },
+          { "t": { "bar": 2,  "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b03-track_pan", "dest": "name:track_pan", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64, "curve": "s-curve" },
+          { "t": { "bar": 2,  "step": 0 },  "v": 30, "curve": "s-curve" },
+          { "t": { "bar": 2,  "step": 15 }, "v": 110, "curve": "s-curve" },
+          { "t": { "bar": 3,  "step": 0 },  "v": 64, "curve": "s-curve" }
+        ]},
+        { "id": "b04-param1", "dest": "name:param1", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64, "curve": "exp" },
+          { "t": { "bar": 3,  "step": 0 },  "v": 30, "curve": "exp" },
+          { "t": { "bar": 3,  "step": 15 }, "v": 110, "curve": "exp" },
+          { "t": { "bar": 4,  "step": 0 },  "v": 64, "curve": "exp" }
+        ]},
+        { "id": "b05-param2", "dest": "name:param2", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64, "curve": "log" },
+          { "t": { "bar": 4,  "step": 0 },  "v": 30, "curve": "log" },
+          { "t": { "bar": 4,  "step": 15 }, "v": 110, "curve": "log" },
+          { "t": { "bar": 5,  "step": 0 },  "v": 64, "curve": "log" }
+        ]},
+        { "id": "b06-param3", "dest": "name:param3", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 5,  "step": 0 },  "v": 30 },
+          { "t": { "bar": 5,  "step": 15 }, "v": 110 },
+          { "t": { "bar": 6,  "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b07-param4", "dest": "name:param4", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 6,  "step": 0 },  "v": 30 },
+          { "t": { "bar": 6,  "step": 15 }, "v": 110 },
+          { "t": { "bar": 7,  "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b08-amp_attack", "dest": "name:amp_attack", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64, "curve": "s-curve" },
+          { "t": { "bar": 7,  "step": 0 },  "v": 30, "curve": "s-curve" },
+          { "t": { "bar": 7,  "step": 15 }, "v": 110, "curve": "s-curve" },
+          { "t": { "bar": 8,  "step": 0 },  "v": 64, "curve": "s-curve" }
+        ]},
+        { "id": "b09-amp_decay", "dest": "name:amp_decay", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 8,  "step": 0 },  "v": 30 },
+          { "t": { "bar": 8,  "step": 15 }, "v": 110 },
+          { "t": { "bar": 9,  "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b10-amp_sustain", "dest": "name:amp_sustain", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 9,  "step": 0 },  "v": 30 },
+          { "t": { "bar": 9,  "step": 15 }, "v": 110 },
+          { "t": { "bar": 10, "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b11-amp_release", "dest": "name:amp_release", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 10, "step": 0 },  "v": 30 },
+          { "t": { "bar": 10, "step": 15 }, "v": 110 },
+          { "t": { "bar": 11, "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b12-filter_attack", "dest": "name:filter_attack", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64, "curve": "exp" },
+          { "t": { "bar": 11, "step": 0 },  "v": 30, "curve": "exp" },
+          { "t": { "bar": 11, "step": 15 }, "v": 110, "curve": "exp" },
+          { "t": { "bar": 12, "step": 0 },  "v": 64, "curve": "exp" }
+        ]},
+        { "id": "b13-filter_decay", "dest": "name:filter_decay", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 12, "step": 0 },  "v": 30 },
+          { "t": { "bar": 12, "step": 15 }, "v": 110 },
+          { "t": { "bar": 13, "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b14-filter_sustain", "dest": "name:filter_sustain", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 13, "step": 0 },  "v": 30 },
+          { "t": { "bar": 13, "step": 15 }, "v": 110 },
+          { "t": { "bar": 14, "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b15-filter_release", "dest": "name:filter_release", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 14, "step": 0 },  "v": 30 },
+          { "t": { "bar": 14, "step": 15 }, "v": 110 },
+          { "t": { "bar": 15, "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b16-voice_mode", "dest": "name:voice_mode", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64, "curve": "log" },
+          { "t": { "bar": 15, "step": 0 },  "v": 30, "curve": "log" },
+          { "t": { "bar": 15, "step": 15 }, "v": 110, "curve": "log" },
+          { "t": { "bar": 16, "step": 0 },  "v": 64, "curve": "log" }
+        ]},
+        { "id": "b17-portamento", "dest": "name:portamento", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 16, "step": 0 },  "v": 30 },
+          { "t": { "bar": 16, "step": 15 }, "v": 110 },
+          { "t": { "bar": 17, "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b18-pitchbend_amount", "dest": "name:pitchbend_amount", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 17, "step": 0 },  "v": 30 },
+          { "t": { "bar": 17, "step": 15 }, "v": 110 },
+          { "t": { "bar": 18, "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b19-engine_volume", "dest": "name:engine_volume", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 18, "step": 0 },  "v": 30 },
+          { "t": { "bar": 18, "step": 15 }, "v": 110 },
+          { "t": { "bar": 19, "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b20-cutoff", "dest": "name:cutoff", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64, "curve": "s-curve" },
+          { "t": { "bar": 19, "step": 0 },  "v": 30, "curve": "s-curve" },
+          { "t": { "bar": 19, "step": 15 }, "v": 110, "curve": "s-curve" },
+          { "t": { "bar": 20, "step": 0 },  "v": 64, "curve": "s-curve" }
+        ]},
+        { "id": "b21-resonance", "dest": "name:resonance", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64, "curve": "exp" },
+          { "t": { "bar": 20, "step": 0 },  "v": 30, "curve": "exp" },
+          { "t": { "bar": 20, "step": 15 }, "v": 110, "curve": "exp" },
+          { "t": { "bar": 21, "step": 0 },  "v": 64, "curve": "exp" }
+        ]},
+        { "id": "b22-env_amount", "dest": "name:env_amount", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 21, "step": 0 },  "v": 30 },
+          { "t": { "bar": 21, "step": 15 }, "v": 110 },
+          { "t": { "bar": 22, "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b23-key_tracking", "dest": "name:key_tracking", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 22, "step": 0 },  "v": 30 },
+          { "t": { "bar": 22, "step": 15 }, "v": 110 },
+          { "t": { "bar": 23, "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b24-send_ext", "dest": "name:send_ext", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64, "curve": "log" },
+          { "t": { "bar": 23, "step": 0 },  "v": 30, "curve": "log" },
+          { "t": { "bar": 23, "step": 15 }, "v": 110, "curve": "log" },
+          { "t": { "bar": 24, "step": 0 },  "v": 64, "curve": "log" }
+        ]},
+        { "id": "b25-send_tape", "dest": "name:send_tape", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 24, "step": 0 },  "v": 30 },
+          { "t": { "bar": 24, "step": 15 }, "v": 110 },
+          { "t": { "bar": 25, "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b26-send_fx1", "dest": "name:send_fx1", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 25, "step": 0 },  "v": 30 },
+          { "t": { "bar": 25, "step": 15 }, "v": 110 },
+          { "t": { "bar": 26, "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b27-send_fx2", "dest": "name:send_fx2", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64, "curve": "s-curve" },
+          { "t": { "bar": 26, "step": 0 },  "v": 30, "curve": "s-curve" },
+          { "t": { "bar": 26, "step": 15 }, "v": 110, "curve": "s-curve" },
+          { "t": { "bar": 27, "step": 0 },  "v": 64, "curve": "s-curve" }
+        ]},
+        { "id": "b28-lfo_dest", "dest": "name:lfo_dest", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 27, "step": 0 },  "v": 30 },
+          { "t": { "bar": 27, "step": 15 }, "v": 110 },
+          { "t": { "bar": 28, "step": 0 },  "v": 64 }
+        ]},
+        { "id": "b29-lfo_param", "dest": "name:lfo_param", "mode": "ramp", "points": [
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 },
+          { "t": { "bar": 28, "step": 0 },  "v": 30 },
+          { "t": { "bar": 28, "step": 15 }, "v": 110 },
+          { "t": { "bar": 0,  "step": 0 },  "v": 64 }
+        ]}
+      ]
     }
   ],
-  "docVersion": 60
+  "docVersion": 0
 }
+

@@ -41,6 +41,7 @@
     <div id="meta"></div>
     <div id="metrics" class="dk"></div>
     <div class="tracks" id="tracks"></div>
+    <div id="automations"></div>
 
     <script>
       const wsBaseUrl = 'ws://127.0.0.1:8765';
@@ -71,7 +72,7 @@
 
   function handle(msg) {
         if (msg.type === 'doc') { const payload = msg.payload; const sha = payload && payload.sha256 || ''; if (sha && sha===lastSha) { /* no redraw */ } else { lastSha = sha||lastSha; lastDoc = payload; lastDocVersion = parseInt(lastDoc.docVersion||0,10)||0; try { console.log('doc v', lastDocVersion, 'sha', sha.slice(0,8)); } catch(e){}; renderDoc(); } try { flushPatchQueue(); } catch(e){} }
-        if (msg.type === 'state') { lastState = msg.payload; renderState(); }
+        if (msg.type === 'state') { lastState = msg.payload; renderState(); renderAutomation(); }
         if (msg.type === 'metrics') { lastMetrics = msg.payload; renderMetrics(); }
         if (msg.type === 'error') {
           console.warn('ws error', msg.payload);
@@ -326,7 +327,68 @@
 
           wrap.appendChild(div);
         });
+        renderAutomation();
       }
+
+      // Automation panel: show current CC values for ccLanes per track, live
+      function renderAutomation() {
+        const root = lastDoc && lastDoc.json; if (!root) return;
+        const contId = 'automations'; const host = document.getElementById(contId);
+        if (!host) return; host.innerHTML = '';
+        const state = lastState || {}; const ccNow = state.ccNow || {}; // { ch: { ctrl: val } }
+        // Name->CC map consistent with engine
+        const nameCC = {
+          track_volume: 7, track_mute: 9, track_pan: 10,
+          param1: 12, param2: 13, param3: 14, param4: 15,
+          amp_attack: 20, amp_decay: 21, amp_sustain: 22, amp_release: 23,
+          filter_attack: 24, filter_decay: 25, filter_sustain: 26, filter_release: 27,
+          voice_mode: 28, portamento: 29, pitchbend_amount: 30, engine_volume: 31,
+          cutoff: 32, resonance: 33, env_amount: 34, key_tracking: 35,
+          send_ext: 36, send_tape: 37, send_fx1: 38, send_fx2: 39,
+          lfo_dest: 40, lfo_param: 41,
+        };
+        const panel = document.createElement('div'); panel.style.marginTop='12px';
+        const title = document.createElement('h3'); title.textContent = 'Automation (live)'; panel.appendChild(title);
+        const tracks = root.tracks || [];
+        tracks.forEach((tr, ti) => {
+          const ch = (typeof tr.midiChannel === 'number') ? tr.midiChannel : 0;
+          const lanes = Array.isArray(tr.ccLanes) ? tr.ccLanes : [];
+          if (!lanes.length) return;
+          const card = document.createElement('div'); card.className='track';
+          const h = document.createElement('h3'); h.textContent = (tr.name||tr.id||'Track') + ` (ch ${ch})`; card.appendChild(h);
+          lanes.forEach((lane) => {
+            const dest = lane.dest; if (dest == null) return;
+            // Resolve control number
+            let ctrl = null;
+            if (typeof dest === 'number') ctrl = dest|0;
+            else if (typeof dest === 'string') {
+              if (dest.startsWith('cc:')) { ctrl = parseInt(dest.split(':',2)[1]||'0',10)||0; }
+              else if (dest.startsWith('name:')) { const nm = dest.split(':',2)[1]||''; ctrl = nameCC[nm] ?? null; }
+            }
+            if (ctrl == null) return;
+            const laneCh = (typeof lane.channel === 'number') ? (lane.channel|0) : ch;
+            const liveVal = (ccNow[laneCh] && ccNow[laneCh][ctrl] != null) ? (ccNow[laneCh][ctrl]|0) : null;
+            const row = document.createElement('div'); row.style.display='flex'; row.style.alignItems='center'; row.style.gap='8px'; row.style.margin='4px 0';
+            const label = document.createElement('div'); label.style.width='180px'; label.style.fontSize='12px'; label.style.color='#444';
+            label.textContent = `${lane.id||'lane'}  dest=${typeof dest==='string'?dest:('cc:'+ctrl)}  ch=${laneCh}`;
+            const barWrap = document.createElement('div'); barWrap.style.flex='1'; barWrap.style.height='8px'; barWrap.style.background='#eee'; barWrap.style.borderRadius='4px';
+            const bar = document.createElement('div'); bar.style.height='8px'; bar.style.borderRadius='4px'; bar.style.background='#5aa7ff'; bar.style.width = (liveVal!=null? (Math.round((liveVal/127)*100)) : 0) + '%';
+            barWrap.appendChild(bar);
+            const val = document.createElement('div'); val.style.width='40px'; val.style.textAlign='right'; val.style.fontFamily='ui-monospace,Menlo,monospace'; val.style.fontSize='12px'; val.textContent = (liveVal!=null? String(liveVal): '—');
+            row.appendChild(label); row.appendChild(barWrap); row.appendChild(val);
+            card.appendChild(row);
+          });
+          // Active notes quick summary
+          const act = (state.activeNotes && state.activeNotes[ch]) || null;
+          const notes = document.createElement('div'); notes.style.fontSize='12px'; notes.style.color='#666'; notes.style.marginTop='4px';
+          if (act) { notes.textContent = `active notes: ${act.count}  pitches: ${(act.pitches||[]).join(', ')}`; } else { notes.textContent = 'active notes: 0'; }
+          card.appendChild(notes);
+          panel.appendChild(card);
+        });
+        if (!panel.children.length) { const p=document.createElement('div'); p.textContent = 'No ccLanes found in current loop.'; panel.appendChild(p); }
+        host.appendChild(panel);
+      }
+
 
       // Controls
       // Transport is device-controlled; UI does not send play/stop
@@ -347,6 +409,8 @@
       // No explicit velocity controls in UI; backend keeps velocity semantics
 
       connect();
+      // Initial draw of automation (empty until first state)
+      renderAutomation();
     </script>
   </body>
   </html>
