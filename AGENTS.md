@@ -35,7 +35,14 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 | APIs & Protocols | WebSocket envelopes `{type, ts, payload}`; RFC 6902 JSON Patch. |
 | Failures & Recovery | Patch rejected (stale): fetch latest, rebase, retry. Validation error: request fix‑it hints from Validator. |
 | Observability & KPIs | Patch acceptance rate, docVersion drift, edit latency to “effective at tick/bar”. |
-| Runbook | Connect to Conductor WS; subscribe to `doc` and `state`; send patches with correct `baseVersion`. |
+| Runbook | Connect to Conductor WS; subscribe to `doc` and `state`; send patches with correct `baseVersion`. Never ask the operator to run terminal commands — execute them yourself via the Codex CLI, requesting approval only when sandbox/permissions require it. |
+
+### Operator Interaction Policy
+
+- Never ask the human operator to run terminal commands.
+- Execute required commands yourself within the Codex CLI environment.
+- Request approval only when sandboxing or permission policy requires escalation.
+- Prefer non-destructive, traceable actions; use Make targets and existing scripts when available.
 
 ## Conductor (watcher + patch gate + broadcaster + metrics)
 
