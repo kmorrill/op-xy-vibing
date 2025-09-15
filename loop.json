@@ -183,6 +183,20 @@
           }
         ]
       }
+    },
+    {
+      "id": "t-chords",
+      "name": "Chords",
+      "type": "synth",
+      "role": "pad",
+      "midiChannel": 6,
+      "pattern": {
+        "lengthBars": 2,
+        "steps": [
+          { "idx": 0,  "events": [ { "chord": "Cmaj7", "velocity": 96, "lengthSteps": 8 } ] },
+          { "idx": 8,  "events": [ { "chord": "G7",    "velocity": 96, "lengthSteps": 8 } ] }
+        ]
+      }
     }
   ],
   "docVersion": 36
