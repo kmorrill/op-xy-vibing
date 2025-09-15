@@ -173,9 +173,9 @@
           const right = document.createElement('span'); right.className = 'pill'; right.textContent = tr.type || 'sampler';
           h3.appendChild(left); h3.appendChild(right); div.appendChild(h3);
 
-          // Steps grid (pattern.steps) — render only if there are steps or no drumKit present
+          // Steps grid (pattern.steps) — pitched tracks: render grid and a basic inspector
           const pat = tr.pattern || {}; const steps = Array.isArray(pat.steps) ? pat.steps : []; const bars = Math.max(1, pat.lengthBars || 1);
-          const showStepsGrid = (!tr.drumKit) || (steps.length > 0);
+          const showStepsGrid = (!tr.drumKit);
           if (showStepsGrid) {
             const total = bars * spb;
             const vals = Array(total).fill(0);
@@ -221,6 +221,33 @@
               grid.appendChild(c);
             }
             div.appendChild(grid);
+
+            // Basic Inspector for first event on a selected step index
+            const insp = document.createElement('div'); insp.style.marginTop='6px'; insp.className='dk';
+            insp.textContent = 'Inspector: select a step by clicking to add, then adjust fields via patches below.';
+            const form = document.createElement('div'); form.style.display='flex'; form.style.gap='8px'; form.style.flexWrap='wrap'; form.style.marginTop='4px';
+            const mk = (lab, id, def, w='70px') => { const span=document.createElement('span'); span.textContent=lab+': '; const inp=document.createElement('input'); inp.type='number'; inp.id=id; inp.value=def; inp.style.width=w; span.appendChild(inp); return [span, inp]; };
+            const [vLab,vIn] = mk('velocity','inspVel','100');
+            const [lLab,lIn] = mk('len','inspLen','1');
+            const [rLab,rIn] = mk('ratchet','inspRat','1');
+            const [pLab,pIn] = mk('prob','inspProb','1', '60px'); pIn.step='0.05'; pIn.min='0'; pIn.max='1';
+            const [mLab,mIn] = mk('microMs','inspMicro','0');
+            form.append(vLab,lLab,rLab,pLab,mLab);
+            const applyBtn=document.createElement('button'); applyBtn.textContent='Apply to last added step';
+            applyBtn.onclick = () => {
+              // Heuristic: patch the last step entry for this track
+              const steps = (lastDoc.json.tracks[ti].pattern.steps||[]); if (!steps.length) return;
+              const si = steps.length-1; const base=`/tracks/${ti}/pattern/steps/${si}/events/0`;
+              const ops=[]; const toInt = (x) => parseInt(String(x||'0'),10)||0; const toNum=(x)=>Number(String(x||'0'))||0;
+              ops.push({op:'replace', path: base+'/velocity', value: toInt(vIn.value)});
+              ops.push({op:'replace', path: base+'/lengthSteps', value: toInt(lIn.value)});
+              ops.push({op:'replace', path: base+'/ratchet', value: Math.max(1,toInt(rIn.value))});
+              ops.push({op:'replace', path: base+'/prob', value: Math.max(0, Math.min(1, toNum(pIn.value)))});
+              ops.push({op:'replace', path: base+'/microshiftMs', value: toInt(mIn.value)});
+              sendPatch(ops, false);
+            };
+            form.appendChild(applyBtn);
+            insp.appendChild(form); div.appendChild(insp);
           }
 
           // DrumKit patterns – render only core parts by default; show others only if present in JSON
