@@ -116,3 +116,25 @@ class TestWSIntegration(unittest.IsolatedAsyncioTestCase):
                     break
         self.assertTrue(ok_rep, "expected snare pattern to be replaced")
 
+    async def test_file_watch_broadcast_rows_update(self):
+        # Capture initial docVersion
+        doc0 = self.c.get_doc(); v0 = int(doc0.get("docVersion", 0))
+        # Edit loop.json on disk: add a cowbell row (not in core UI set for this init)
+        obj = json.loads(self.loop_path.read_text())
+        patterns = obj["tracks"][0]["drumKit"]["patterns"]
+        patterns.append({"bar": 1, "key": "cowbell", "pattern": "x...............", "vel": 105})
+        self.loop_path.write_text(json.dumps(obj))
+        # Wait for a 'doc' broadcast that contains cowbell and docVersion increased
+        saw = False
+        for _ in range(40):  # allow up to ~20s with metrics poll
+            raw = await asyncio.wait_for(self.ws.recv(), timeout=1.0)
+            o = json.loads(raw)
+            if o.get("type") == "doc":
+                d = o.get("payload") or {}
+                v = int(d.get("docVersion", 0))
+                json_doc = (d.get("json") or {})
+                patt = [p for p in (json_doc.get("tracks", [{}])[0].get("drumKit", {}).get("patterns", [])) if p.get("key") == "cowbell"]
+                if v > v0 and patt:
+                    saw = True
+                    break
+        self.assertTrue(saw, "expected doc broadcast with cowbell and bumped docVersion after file edit")
