@@ -1,4 +1,5 @@
 PY := python3
+CLOCK ?= external
 
 .PHONY: validate validate-fixtures hash-fixtures test demo-note
 
@@ -38,7 +39,11 @@ play-external:
 
 .PHONY: conductor-run
 conductor-run:
-	@$(PY) -m conductor.conductor_server --loop $(LOOP) --port "$(PORT)" --bpm $(BPM) --ws-host 127.0.0.1 --ws-port 8765
+	@$(PY) -m conductor.conductor_server --loop $(LOOP) --port "$(PORT)" --bpm $(BPM) --clock-source $(CLOCK) --ws-host 127.0.0.1 --ws-port 8765
+
+.PHONY: play-automation-sweep
+play-automation-sweep:
+	@$(PY) -m conductor.conductor_server --loop conductor/tests/fixtures/loop-automation-sweep.json --bpm $(BPM) --clock-source internal --ws-host 127.0.0.1 --ws-port 8765
 
 .PHONY: ui-serve
 ui-serve:

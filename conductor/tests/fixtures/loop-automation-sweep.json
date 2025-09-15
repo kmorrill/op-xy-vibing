@@ -1,0 +1,52 @@
+{
+  "version": "opxyloop-1.0",
+  "meta": { "tempo": 120, "ppq": 96, "stepsPerBar": 16 },
+  "deviceProfile": { "portName": "OP-XY" },
+  "tracks": [
+    {
+      "id": "t-auto",
+      "name": "Automation Sweep",
+      "type": "sampler",
+      "midiChannel": 0,
+      "pattern": { "lengthBars": 2, "steps": [] },
+      "ccLanes": [
+        { "id": "cutoff-linear", "dest": "name:cutoff", "mode": "ramp", "points": [
+          { "t": { "bar": 0, "step": 0 },  "v": 30, "curve": "linear" },
+          { "t": { "bar": 0, "step": 15 }, "v": 110, "curve": "linear" }
+        ]},
+        { "id": "resonance-scurve", "dest": "name:resonance", "mode": "points", "points": [
+          { "t": { "bar": 0, "step": 0 },  "v": 20, "curve": "s-curve" },
+          { "t": { "bar": 0, "step": 8 },  "v": 100, "curve": "s-curve" },
+          { "t": { "bar": 0, "step": 15 }, "v": 40, "curve": "s-curve" }
+        ]},
+        { "id": "env-exp", "dest": "name:env_amount", "mode": "points", "points": [
+          { "t": { "bar": 1, "step": 0 },  "v": 10, "curve": "exp" },
+          { "t": { "bar": 1, "step": 15 }, "v": 120, "curve": "exp" }
+        ]},
+        { "id": "vol-hold-steps", "dest": "name:track_volume", "mode": "hold", "points": [
+          { "t": { "bar": 0, "step": 0 },  "v": 64 },
+          { "t": { "bar": 0, "step": 4 },  "v": 90 },
+          { "t": { "bar": 0, "step": 8 },  "v": 50 },
+          { "t": { "bar": 0, "step": 12 }, "v": 100 }
+        ]},
+        { "id": "pan-log", "dest": "name:track_pan", "mode": "ramp", "points": [
+          { "t": { "ticks": 0 }, "v": 10, "curve": "log" },
+          { "t": { "ticks": 383 }, "v": 117, "curve": "log" }
+        ]},
+        { "id": "send-fx1", "dest": "name:send_fx1", "mode": "ramp", "points": [
+          { "t": { "bar": 1, "step": 0 },  "v": 30 },
+          { "t": { "bar": 1, "step": 15 }, "v": 100 }
+        ]},
+        { "id": "adsr-attack", "dest": "name:amp_attack", "mode": "points", "points": [
+          { "t": { "bar": 0, "step": 0 },  "v": 10 },
+          { "t": { "bar": 0, "step": 15 }, "v": 80 }
+        ]},
+        { "id": "adsr-release", "dest": "name:amp_release", "mode": "points", "points": [
+          { "t": { "bar": 1, "step": 0 },  "v": 20 },
+          { "t": { "bar": 1, "step": 15 }, "v": 100 }
+        ]}
+      ]
+    }
+  ]
+}
+

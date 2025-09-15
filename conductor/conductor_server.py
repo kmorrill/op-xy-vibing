@@ -194,6 +194,8 @@ class Conductor:
                     "tickInBar": int(tick_in_bar),
                     "barTicks": int(bar_ticks),
                 },
+                "ccNow": self.engine.get_cc_snapshot(),
+                "activeNotes": self.engine.get_active_notes_snapshot(),
             }
 
     def get_doc(self) -> Dict[str, Any]:

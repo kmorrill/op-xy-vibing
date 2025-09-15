@@ -113,6 +113,25 @@ class Engine:
         # Return a shallow copy of metrics (e.g., for printing/broadcasting)
         return dict(self.metrics)
 
+    def get_cc_snapshot(self) -> Dict[int, Dict[int, int]]:
+        out: Dict[int, Dict[int, int]] = {}
+        for (ch, ctrl), val in self._last_cc.items():
+            out.setdefault(int(ch), {})[int(ctrl)] = int(val)
+        return out
+
+    def get_active_notes_snapshot(self) -> Dict[int, Dict[str, Any]]:
+        """Return current active notes per channel with simple stats."""
+        summary: Dict[int, Dict[str, Any]] = {}
+        for (ch, pitch), stack in self.active.items():
+            ent = summary.setdefault(int(ch), {"count": 0, "pitches": []})
+            ent["count"] = int(ent.get("count", 0)) + len(stack)
+            if pitch not in ent["pitches"]:
+                ent["pitches"].append(int(pitch))
+        # sort pitches for stable UI
+        for ch, ent in summary.items():
+            ent["pitches"].sort()
+        return summary
+
     # --- Internals ---
     def _emit_due_ons(self, tick: int) -> None:
         if not self.doc or self.step_ticks <= 0:
@@ -312,14 +331,10 @@ class Engine:
         meta = doc.get("meta", {})
         spb = int(meta.get("stepsPerBar", 16))
         bar_ticks = self.step_ticks * spb
-        # Only compute on exact step boundaries
-        if (tick % max(1, self.step_ticks)) != 0:
-            return
-        # Compute step position
+        # Compute positions for this absolute tick
         step_in_bar = (tick % bar_ticks) // self.step_ticks if bar_ticks > 0 else 0
-        # Reset LFO phase on bar boundary or on fresh start
+        # Reset LFO phase on first bar boundary after start
         if step_in_bar == 0 and self._started:
-            # phase implied by step_in_bar, nothing to store; just clear the started flag
             self._started = False
         # OP-XY fixed CC name map (subset; see docs)
         name_cc = {
@@ -359,53 +374,99 @@ class Engine:
             ch = int(tr.get("midiChannel", 0))
             pat = tr.get("pattern", {})
             length_bars = max(1, int(pat.get("lengthBars", 1)))
-            # Base values from ccLanes (simple linear ramp between points within current bar)
+            # Base values from ccLanes — high-resolution per tick with interpolation
             base_values: Dict[int, int] = {}
+            base_value_channel_override: Dict[int, int] = {}
             cc_lanes = tr.get("ccLanes") or []
             if isinstance(cc_lanes, list):
                 for lane in cc_lanes:
                     try:
                         dest = str(lane.get("dest", ""))
-                        control = None
-                        if dest.startswith("cc:"):
+                        # Resolve control number
+                        control: int | None = None
+                        if isinstance(lane.get("dest"), int):
+                            control = int(lane.get("dest"))
+                        elif dest.startswith("cc:"):
                             control = int(dest.split(":", 1)[1])
                         elif dest.startswith("name:"):
                             control = name_cc.get(dest.split(":", 1)[1])
                         if control is None:
                             continue
                         pts = lane.get("points") or []
-                        # Gather points for bar 0 only (MVP). Interpolate across steps of current bar.
-                        # Fallback: if no points, skip.
                         if not isinstance(pts, list) or len(pts) == 0:
                             continue
-                        # Find two bounding points for current step
-                        # Points format: {"t": {"bar": 0, "step": s}, "v": value}
-                        s = step_in_bar
-                        left_v = None
-                        right_v = None
-                        left_s = None
-                        right_s = None
+                        # Convert points to absolute tick positions within the pattern period
+                        period = max(1, bar_ticks * length_bars)
+                        pts_conv: List[Tuple[int, int, str]] = []  # (tick_in_period, value, curve)
                         for p in pts:
-                            t = p.get("t", {})
-                            if int(t.get("bar", 0)) != ((tick // bar_ticks) % length_bars if bar_ticks > 0 else 0):
-                                continue
-                            ps = int(t.get("step", 0))
-                            pv = int(p.get("v", 0))
-                            if ps <= s and (left_s is None or ps >= left_s):
-                                left_s, left_v = ps, pv
-                            if ps >= s and (right_s is None or ps <= right_s):
-                                right_s, right_v = ps, pv
-                        if left_v is None and right_v is None:
+                            t = p.get("t", {}) or {}
+                            v = int(p.get("v", 0))
+                            curve = str(p.get("curve", "linear"))
+                            if isinstance(t.get("ticks"), (int, float)):
+                                tt = int(t.get("ticks")) % period
+                            else:
+                                b = int(t.get("bar", 0))
+                                s = int(t.get("step", 0))
+                                tt = ((b % max(1, length_bars)) * bar_ticks + (s % spb) * self.step_ticks) % period
+                            pts_conv.append((tt, max(0, min(127, v)), curve))
+                        if not pts_conv:
                             continue
-                        if left_v is None:
-                            base = right_v
-                        elif right_v is None or right_s == left_s:
-                            base = left_v
+                        pts_conv.sort(key=lambda x: x[0])
+                        pos = tick % period
+                        # Find left and right points bracketing pos (circular)
+                        left_i = None
+                        for i, (tt, _vv, _cv) in enumerate(pts_conv):
+                            if tt <= pos:
+                                left_i = i
+                            else:
+                                break
+                        if left_i is None:
+                            left_i = len(pts_conv) - 1
+                        right_i = (left_i + 1) % len(pts_conv)
+                        t_left, v_left, curve_left = pts_conv[left_i]
+                        t_right, v_right, _curve_right = pts_conv[right_i]
+                        if lane.get("mode") == "hold":
+                            base_val = v_left
                         else:
-                            # Linear interpolation between left and right steps
-                            frac = (s - left_s) / max(1, (right_s - left_s))
-                            base = int(round(left_v + frac * (right_v - left_v)))
-                        base_values[int(control)] = max(0, min(127, int(base)))
+                            # Interpolate across segment duration with easing
+                            if t_right == t_left:
+                                frac = 0.0
+                                seg = period
+                            else:
+                                seg = (t_right - t_left) if t_right > t_left else (t_right + period - t_left)
+                                prog = (pos - t_left) if pos >= t_left else (pos + period - t_left)
+                                frac = max(0.0, min(1.0, prog / max(1, seg)))
+                            mode = str(lane.get("mode", "points"))
+                            curve_kind = str(curve_left or "linear").lower()
+                            # Map frac through curve
+                            if mode == "ramp" and curve_kind == "linear":
+                                eased = frac
+                            else:
+                                if curve_kind in ("linear", "line"):
+                                    eased = frac
+                                elif curve_kind in ("exp", "exponential"):
+                                    eased = frac * frac
+                                elif curve_kind in ("log", "logarithmic"):
+                                    eased = (frac ** 0.5)
+                                elif curve_kind in ("s-curve", "scurve", "smoothstep"):
+                                    eased = (3 * (frac ** 2) - 2 * (frac ** 3))
+                                else:
+                                    eased = frac
+                            base_val = int(round(v_left + (v_right - v_left) * eased))
+                        # Apply optional lane range clamp, then 0..127
+                        rng = lane.get("range")
+                        if isinstance(rng, list) and len(rng) == 2:
+                            try:
+                                lo = int(rng[0]); hi = int(rng[1])
+                                if lo > hi:
+                                    lo, hi = hi, lo
+                                base_val = max(lo, min(hi, base_val))
+                            except Exception:
+                                pass
+                        base_values[int(control)] = max(0, min(127, int(base_val)))
+                        # Optional per-lane MIDI channel override
+                        if isinstance(lane.get("channel"), int) and 0 <= int(lane.get("channel")) <= 15:
+                            base_value_channel_override[int(control)] = int(lane.get("channel"))
                     except Exception:
                         continue
 
@@ -443,8 +504,9 @@ class Engine:
                         if steps_per_cycle <= 0:
                             # Default to 1/8
                             steps_per_cycle = 2
-                        # Triangle from -depth..+depth. Phase resets each bar so use step_in_bar
-                        phase = step_in_bar % steps_per_cycle
+                        # Triangle from -depth..+depth. Phase resets each bar
+                        # Use fractional position within the current bar cycle
+                        phase = (tick // max(1, self.step_ticks)) % steps_per_cycle
                         half = steps_per_cycle / 2.0
                         if phase < half:
                             # rising from -1 to +1 across first half
@@ -495,22 +557,23 @@ class Engine:
 
             for ctrl, value in merged:
                 # Check per-track limit
-                per_track = self._cc_sent_tick_per_track.get(ch, 0)
+                send_ch = int(base_value_channel_override.get(ctrl, ch))
+                per_track = self._cc_sent_tick_per_track.get(send_ch, 0)
                 if per_track >= self.cc_limit_per_tick_track or self._cc_sent_tick_global >= self.cc_limit_per_tick_global:
                     self.metrics["shed_cc"] += 1
                     continue
-                key = (ch, int(ctrl))
+                key = (send_ch, int(ctrl))
                 if self._last_cc.get(key) == value:
                     # unchanged; skip without counting toward limit
                     continue
                 # Send CC
                 try:
-                    self.sink.control_change(ch, int(ctrl), value)
+                    self.sink.control_change(send_ch, int(ctrl), value)
                     self.metrics["msgs_cc"] += 1
                     self._last_cc[key] = value
                     # increment counters
                     self._cc_sent_tick_global += 1
-                    self._cc_sent_tick_per_track[ch] = per_track + 1
+                    self._cc_sent_tick_per_track[send_ch] = per_track + 1
                 except Exception:
                     # treat as shed if send fails
                     self.metrics["shed_cc"] += 1
