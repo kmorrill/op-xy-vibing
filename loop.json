@@ -101,6 +101,22 @@
           }
         ]
       }
+    },
+    {
+      "id": "t-bass",
+      "name": "Bass",
+      "type": "synth",
+      "role": "bass",
+      "midiChannel": 2,
+      "pattern": {
+        "lengthBars": 2,
+        "steps": [
+          { "idx": 0,  "events": [ { "pitch": 40, "velocity": 105, "lengthSteps": 4 } ] },
+          { "idx": 8,  "events": [ { "pitch": 43, "velocity": 100, "lengthSteps": 4 } ] },
+          { "idx": 16, "events": [ { "pitch": 45, "velocity": 105, "lengthSteps": 4 } ] },
+          { "idx": 24, "events": [ { "pitch": 43, "velocity": 100, "lengthSteps": 4 } ] }
+        ]
+      }
     }
   ],
   "docVersion": 24
