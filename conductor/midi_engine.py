@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
+import random
 
 
 @dataclass
@@ -70,6 +71,8 @@ class Engine:
         limits = limits or {}
         self.cc_limit_per_tick_global: int = int(limits.get("cc_per_tick_global", 1_000_000))
         self.cc_limit_per_tick_track: int = int(limits.get("cc_per_tick_track", 1_000_000))
+        # Deterministic RNG for probability-based events
+        self._rng = random.Random(0)
 
     # --- Public control ---
     def load(self, doc: Dict[str, Any]) -> None:
@@ -163,39 +166,61 @@ class Engine:
                 idx = int(st.get("idx", -1))
                 if idx < 0:
                     continue
-                step_tick = (idx % (spb * length_bars))
-                step_tick *= self.step_ticks
-                # Emit only when exactly due at this tick (no look-ahead)
-                if (tick % (bar_ticks * length_bars)) == step_tick:
-                    events = st.get("events", [])
-                    for e in events:
-                        # Support: absolute pitch or chord string
+                period = max(1, bar_ticks * length_bars)
+                step_tick = (idx % (spb * length_bars)) * self.step_ticks
+                tick_in_loop = tick % period
+                # Handle events with microshift/ratchet: compute exact scheduled tick per event
+                events = st.get("events", [])
+                for e in events:
+                        # Probability
+                        prob = float(e.get("prob", 1.0))
+                        if prob <= 0:
+                            continue
+                        if prob < 1.0 and self._rng.random() > prob:
+                            continue
+
                         vel = int(e.get("velocity", 100))
                         ls = int(e.get("lengthSteps", 1))
                         gate = float(e.get("gate", 1.0))
-                        length_ticks = max(1, int(self.step_ticks * ls * gate))
-                        on_tick = tick
-                        off_tick = tick + length_ticks
-
-                        pitches: List[int] = []
-                        if "pitch" in e and isinstance(e.get("pitch"), (int, float)):
-                            pitches = [int(e.get("pitch"))]
-                        elif isinstance(e.get("chord"), str):
-                            pitches = self._expand_chord(e.get("chord"), e)
-                        else:
-                            # degree support not yet implemented in engine (reserved)
+                        ratchet = int(e.get("ratchet", 1) or 1)
+                        micro_ms = int(e.get("microshiftMs", 0) or 0)
+                        bpm = float(meta.get("tempo", 120))
+                        ppq = int(meta.get("ppq", 96))
+                        # ticks per ms = (ppq * bpm / 60) / 1000
+                        tpm = (ppq * bpm) / 60000.0
+                        offset_ticks = int(round(micro_ms * tpm))
+                        scheduled_tick = (step_tick + offset_ticks) % period
+                        if tick_in_loop != scheduled_tick:
                             continue
 
-                        for p in pitches:
-                            pitch = max(0, min(127, int(p)))
-                            note_id = self._next_note_id
-                            self._next_note_id += 1
-                            self.sink.note_on(ch, pitch, vel)
-                            self.metrics["msgs_note_on"] += 1
-                            key = (ch, pitch)
-                            self.active.setdefault(key, []).append(
-                                NoteEvent(channel=ch, pitch=pitch, velocity=vel, on_tick=on_tick, off_tick=off_tick, note_id=note_id)
-                            )
+                        base_len = max(1, int(self.step_ticks * ls * gate))
+
+                        # Resolve pitches from pitch|degree|chord
+                        pitches: List[int] = []
+                        if isinstance(e.get("pitch"), (int, float)):
+                            pitches = [int(e.get("pitch"))]
+                        elif isinstance(e.get("degree"), (int, float)):
+                            pitches = [self._degree_to_pitch(int(e.get("degree")), int(e.get("octaveOffset", 0))) ]
+                        elif isinstance(e.get("chord"), str):
+                            pitches = self._expand_chord(str(e.get("chord")), e)
+                        else:
+                            continue
+
+                        reps = max(1, ratchet)
+                        seg = max(1, base_len // reps)
+                        for r_i in range(reps):
+                            on_tick_abs = tick + (r_i * seg)
+                            off_tick = on_tick_abs + seg
+                            for p in pitches:
+                                pitch = max(0, min(127, int(p)))
+                                note_id = self._next_note_id
+                                self._next_note_id += 1
+                                self.sink.note_on(ch, pitch, vel)
+                                self.metrics["msgs_note_on"] += 1
+                                key = (ch, pitch)
+                                self.active.setdefault(key, []).append(
+                                    NoteEvent(channel=ch, pitch=pitch, velocity=vel, on_tick=on_tick_abs, off_tick=off_tick, note_id=note_id)
+                                )
 
             # drumKit runtime scheduling
             dk = tr.get("drumKit")
@@ -569,6 +594,65 @@ class Engine:
         root_base = 48 + root_pc  # C3 base
         return root_base, intervals
 
+    def _key_to_pc(self, key: str) -> int | None:
+        if not isinstance(key, str) or len(key) < 1:
+            return None
+        k = key.strip()
+        letter = k[0].upper()
+        if letter not in "CDEFGAB":
+            return None
+        accidental = 0
+        if len(k) >= 2 and k[1] in ("#", "b"):
+            accidental = 1 if k[1] == "#" else -1
+        base = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}[letter]
+        return (base + accidental) % 12
+
+    def _parse_roman_chord(self, sym: str) -> tuple[int, List[int]] | None:
+        """Parse a simple roman numeral chord (I..VII, i..vii) relative to meta.key/mode.
+
+        Uppercase -> major triad, lowercase -> minor triad. Optional '7' not handled in MVP.
+        Returns (root_midi_base, intervals). Root base is in octave 3 aligned to key tonic.
+        """
+        if not isinstance(sym, str) or len(sym) == 0:
+            return None
+        s = sym.strip()
+        # Extract roman numeral letters at start
+        rn = ""
+        for ch in s:
+            if ch in "ivIV":
+                rn += ch
+            else:
+                break
+        if not rn:
+            return None
+        is_major_quality = rn.isupper()
+        # Map roman to degree 1..7
+        roman_map = {
+            "i": 1, "ii": 2, "iii": 3, "iv": 4, "v": 5, "vi": 6, "vii": 7,
+            "I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6, "VII": 7,
+        }
+        deg = roman_map.get(rn)
+        if not deg:
+            return None
+        # Determine key pitch-class and scale degrees by mode
+        key_pc = self._key_to_pc(str((self.meta or {}).get("key", "C")))
+        if key_pc is None:
+            key_pc = 0
+        mode = str((self.meta or {}).get("mode", "major")).lower()
+        if mode == "minor":
+            scale = [0, 2, 3, 5, 7, 8, 10]
+        else:
+            scale = [0, 2, 4, 5, 7, 9, 11]
+        # Degree-1 => scale[0]
+        root_pc = (key_pc + scale[(deg - 1) % 7]) % 12
+        # Place tonic C3 at 48, so key tonic base = 48 + key_pc
+        tonic_base = 48 + key_pc
+        # Choose base for root within octave 3
+        root_base = 48 + root_pc
+        # Choose quality intervals
+        intervals = [0, 4, 7] if is_major_quality else [0, 3, 7]
+        return root_base, intervals
+
     def _expand_chord(self, sym: str, event: Dict[str, Any]) -> List[int]:
         """Expand chord string to MIDI pitches. MVP: absolute chord symbols only.
 
@@ -577,6 +661,9 @@ class Engine:
         """
         out: List[int] = []
         parsed = self._parse_chord_symbol(sym)
+        if not parsed:
+            # Try roman numerals relative to key/mode
+            parsed = self._parse_roman_chord(sym)
         if not parsed:
             return out
         base, intervals = parsed
@@ -599,3 +686,25 @@ class Engine:
         # Ensure ascending order for determinism
         out.sort()
         return out
+
+    def _key_to_pc(self, key: str) -> int | None:
+        if not isinstance(key, str) or len(key) < 1:
+            return None
+        k = key.strip()
+        letter = k[0].upper()
+        if letter not in "CDEFGAB":
+            return None
+        accidental = 0
+        if len(k) >= 2 and k[1] in ("#", "b"):
+            accidental = 1 if k[1] == "#" else -1
+        base = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}[letter]
+        return (base + accidental) % 12
+
+    def _degree_to_pitch(self, degree: int, octave_offset: int) -> int:
+        degree = max(1, min(7, int(degree)))
+        key_pc = self._key_to_pc(str((self.meta or {}).get("key", "C"))) or 0
+        mode = str((self.meta or {}).get("mode", "major")).lower()
+        scale = [0, 2, 4, 5, 7, 9, 11] if mode != "minor" else [0, 2, 3, 5, 7, 8, 10]
+        pc = (key_pc + scale[(degree - 1) % 7]) % 12
+        base = 48 + pc
+        return base + 12 * int(octave_offset)

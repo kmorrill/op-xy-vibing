@@ -3,7 +3,9 @@
   "meta": {
     "tempo": 100,
     "ppq": 96,
-    "stepsPerBar": 16
+    "stepsPerBar": 16,
+    "key": "C",
+    "mode": "major"
   },
   "deviceProfile": {
     "portName": "OP-XY",
@@ -34,156 +36,55 @@
   },
   "tracks": [
     {
-      "id": "t-bass",
-      "name": "Bass",
+      "id": "t-epiano",
+      "name": "E-Piano",
       "type": "synth",
-      "role": "bass",
-      "midiChannel": 2,
+      "role": "keys",
+      "midiChannel": 3,
       "pattern": {
-        "lengthBars": 2,
+        "lengthBars": 4,
         "steps": [
-          {
-            "idx": 0,
-            "events": [
-              {
-                "pitch": 40,
-                "velocity": 105,
-                "lengthSteps": 4
-              }
-            ]
-          },
-          {
-            "idx": 2,
-            "events": [
-              {
-                "pitch": 40,
-                "velocity": 100,
-                "lengthSteps": 1
-              }
-            ]
-          },
-          {
-            "idx": 3,
-            "events": [
-              {
-                "pitch": 40,
-                "velocity": 100,
-                "lengthSteps": 1
-              }
-            ]
-          },
-          {
-            "idx": 4,
-            "events": [
-              {
-                "pitch": 40,
-                "velocity": 100,
-                "lengthSteps": 1
-              }
-            ]
-          },
-          {
-            "idx": 6,
-            "events": [
-              {
-                "pitch": 40,
-                "velocity": 100,
-                "lengthSteps": 1
-              }
-            ]
-          },
-          {
-            "idx": 16,
-            "events": [
-              {
-                "pitch": 45,
-                "velocity": 105,
-                "lengthSteps": 4
-              }
-            ]
-          },
-          {
-            "idx": 24,
-            "events": [
-              {
-                "pitch": 43,
-                "velocity": 100,
-                "lengthSteps": 4
-              }
-            ]
-          }
+          { "idx": 0,  "events": [ { "degree": 1, "octaveOffset": -1, "velocity": 100, "lengthSteps": 2 } ] },
+          { "idx": 2,  "events": [ { "degree": 2, "octaveOffset": -1, "velocity": 96,  "lengthSteps": 1 } ] },
+          { "idx": 3,  "events": [ { "degree": 3, "octaveOffset": -1, "velocity": 94,  "lengthSteps": 1 } ] },
+          { "idx": 4,  "events": [ { "degree": 5, "octaveOffset": -1, "velocity": 104, "lengthSteps": 2 } ] },
+          { "idx": 6,  "events": [ { "degree": 6, "octaveOffset": -1, "velocity": 98,  "lengthSteps": 1, "ratchet": 2, "gate": 0.8 } ] },
+          { "idx": 7,  "events": [ { "degree": 5, "octaveOffset": -1, "velocity": 96,  "lengthSteps": 1 } ] },
+          { "idx": 9,  "events": [ { "degree": 4, "octaveOffset": -1, "velocity": 95,  "lengthSteps": 1 } ] },
+          { "idx": 11, "events": [ { "degree": 3, "octaveOffset": -1, "velocity": 94,  "lengthSteps": 1, "microshiftMs": 8 } ] },
+          { "idx": 12, "events": [ { "chord": "Cmaj7", "register": ["C3","B3"], "velocity": 92, "lengthSteps": 2 } ] },
+
+          { "idx": 16, "events": [ { "degree": 6, "octaveOffset": -1, "velocity": 102, "lengthSteps": 2 } ] },
+          { "idx": 18, "events": [ { "degree": 7, "octaveOffset": -1, "velocity": 100, "lengthSteps": 1 } ] },
+          { "idx": 19, "events": [ { "degree": 1, "octaveOffset": 0,  "velocity": 108, "lengthSteps": 2, "microshiftMs": 10 } ] },
+          { "idx": 20, "events": [ { "degree": 2, "octaveOffset": 0,  "velocity": 106, "lengthSteps": 1, "ratchet": 3, "gate": 0.7 } ] },
+          { "idx": 22, "events": [ { "degree": 3, "octaveOffset": 0,  "velocity": 104, "lengthSteps": 1 } ] },
+          { "idx": 24, "events": [ { "chord": "G7",    "register": ["B2","A3"], "velocity": 96, "lengthSteps": 2 } ] },
+          { "idx": 26, "events": [ { "degree": 2, "octaveOffset": 0,  "velocity": 102, "lengthSteps": 1 } ] },
+          { "idx": 27, "events": [ { "degree": 1, "octaveOffset": 0,  "velocity": 100, "lengthSteps": 1 } ] },
+          { "idx": 28, "events": [ { "degree": 6, "octaveOffset": -1, "velocity": 98,  "lengthSteps": 2 } ] },
+          { "idx": 31, "events": [ { "degree": 5, "octaveOffset": -1, "velocity": 96,  "lengthSteps": 1, "microshiftMs": 12, "prob": 1.0 } ] },
+
+          { "idx": 32, "events": [ { "degree": 4, "octaveOffset": -1, "velocity": 98,  "lengthSteps": 2 } ] },
+          { "idx": 34, "events": [ { "degree": 5, "octaveOffset": -1, "velocity": 96,  "lengthSteps": 1 } ] },
+          { "idx": 35, "events": [ { "degree": 6, "octaveOffset": -1, "velocity": 94,  "lengthSteps": 1 } ] },
+          { "idx": 36, "events": [ { "degree": 6, "octaveOffset": -1, "velocity": 100, "lengthSteps": 2, "ratchet": 2, "gate": 0.85 } ] },
+          { "idx": 39, "events": [ { "degree": 5, "octaveOffset": -1, "velocity": 96,  "lengthSteps": 1, "microshiftMs": 6 } ] },
+          { "idx": 40, "events": [ { "degree": 4, "octaveOffset": -1, "velocity": 95,  "lengthSteps": 2 } ] },
+          { "idx": 44, "events": [ { "chord": "Fmaj7", "register": ["C3","B3"], "velocity": 90, "lengthSteps": 2 } ] },
+
+          { "idx": 48, "events": [ { "degree": 2, "octaveOffset": -1, "velocity": 100, "lengthSteps": 2 } ] },
+          { "idx": 50, "events": [ { "degree": 3, "octaveOffset": -1, "velocity": 98,  "lengthSteps": 1 } ] },
+          { "idx": 51, "events": [ { "degree": 5, "octaveOffset": -1, "velocity": 100, "lengthSteps": 2, "ratchet": 3, "gate": 0.75 } ] },
+          { "idx": 54, "events": [ { "degree": 3, "octaveOffset": -1, "velocity": 96,  "lengthSteps": 1 } ] },
+          { "idx": 56, "events": [ { "degree": 5, "octaveOffset": -1, "velocity": 104, "lengthSteps": 2, "microshiftMs": 10 } ] },
+          { "idx": 58, "events": [ { "degree": 1, "octaveOffset": 0,  "velocity": 110, "lengthSteps": 3 } ] },
+          { "idx": 61, "events": [ { "degree": 7, "octaveOffset": -1, "velocity": 98,  "lengthSteps": 1 } ] },
+          { "idx": 62, "events": [ { "degree": 1, "octaveOffset": 0,  "velocity": 106, "lengthSteps": 1 } ] }
         ]
       }
-    },
-    {
-      "id": "t-drums",
-      "name": "Drum Kit",
-      "type": "sampler",
-      "role": "drums",
-      "midiChannel": 0,
-      "pattern": {
-        "lengthBars": 1,
-        "steps": []
-      },
-      "drumKit": {
-        "patterns": [
-          {
-            "bar": 1,
-            "key": "chi",
-            "pattern": "................",
-            "vel": 100
-          },
-          {
-            "bar": 1,
-            "key": "clap",
-            "pattern": "................",
-            "vel": 100
-          },
-          {
-            "bar": 1,
-            "key": "closed_hat",
-            "pattern": "................",
-            "vel": 80
-          },
-          {
-            "bar": 1,
-            "key": "cowbell",
-            "pattern": "................",
-            "vel": 105
-          },
-          {
-            "bar": 1,
-            "key": "crash",
-            "pattern": "................",
-            "vel": 100
-          },
-          {
-            "bar": 1,
-            "key": "kick",
-            "pattern": "x...........x.xx",
-            "vel": 120
-          },
-          {
-            "bar": 1,
-            "key": "metal",
-            "pattern": "................",
-            "vel": 100
-          },
-          {
-            "bar": 1,
-            "key": "open_hat",
-            "pattern": "............x...",
-            "vel": 90
-          },
-          {
-            "bar": 1,
-            "key": "snare",
-            "pattern": "................",
-            "vel": 110
-          }
-        ]
-      }
-    },
+    }
+    ,
     {
       "id": "t-chords",
       "name": "Chords",
@@ -191,13 +92,19 @@
       "role": "pad",
       "midiChannel": 6,
       "pattern": {
-        "lengthBars": 2,
+        "lengthBars": 4,
         "steps": [
-          { "idx": 0,  "events": [ { "chord": "Cmaj7", "velocity": 96, "lengthSteps": 8 } ] },
-          { "idx": 8,  "events": [ { "chord": "G7",    "velocity": 96, "lengthSteps": 8 } ] }
+          { "idx": 0,  "events": [ { "chord": "Cmaj7", "velocity": 88, "lengthSteps": 8, "register": ["C3","B4"] } ] },
+          { "idx": 8,  "events": [ { "chord": "G7",    "velocity": 90, "lengthSteps": 8, "register": ["B2","A4"] } ] },
+          { "idx": 16, "events": [ { "chord": "Am7",   "velocity": 86, "lengthSteps": 8, "register": ["C3","B4"] } ] },
+          { "idx": 24, "events": [ { "chord": "Dm7",   "velocity": 86, "lengthSteps": 8, "register": ["C3","B4"] } ] },
+          { "idx": 32, "events": [ { "chord": "Fmaj7", "velocity": 84, "lengthSteps": 8, "register": ["C3","B4"] } ] },
+          { "idx": 40, "events": [ { "chord": "G7",    "velocity": 88, "lengthSteps": 8, "register": ["B2","A4"] } ] },
+          { "idx": 48, "events": [ { "chord": "Dm7",   "velocity": 84, "lengthSteps": 8, "register": ["C3","B4"] } ] },
+          { "idx": 56, "events": [ { "chord": "G7",    "velocity": 88, "lengthSteps": 8, "register": ["B2","A4"] } ] }
         ]
       }
     }
   ],
-  "docVersion": 36
+  "docVersion": 51
 }
