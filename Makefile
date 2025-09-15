@@ -45,6 +45,10 @@ conductor-run:
 play-automation-sweep:
 	@$(PY) -m conductor.conductor_server --loop conductor/tests/fixtures/loop-automation-sweep.json --bpm $(BPM) --clock-source internal --ws-host 127.0.0.1 --ws-port 8765
 
+.PHONY: play-lfo-track7
+play-lfo-track7:
+	@$(PY) -m conductor.conductor_server --loop conductor/tests/fixtures/loop-lfo-track7.json --bpm $(BPM) --clock-source internal --ws-host 127.0.0.1 --ws-port 8765
+
 .PHONY: ui-serve
 ui-serve:
 	@cd ui && $(PY) -m http.server 8080 --bind 127.0.0.1

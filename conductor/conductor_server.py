@@ -196,6 +196,7 @@ class Conductor:
                 },
                 "ccNow": self.engine.get_cc_snapshot(),
                 "activeNotes": self.engine.get_active_notes_snapshot(),
+                "lfoNow": self.engine.get_lfo_snapshot(),
             }
 
     def get_doc(self) -> Dict[str, Any]:
@@ -485,9 +486,19 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
                     print(f"[ws] recv type={t}", flush=True)
                 except Exception:
                     pass
-                if t == "play" or t == "stop" or t == "continue":
-                    # Transport is device-controlled; ignore UI transport commands
-                    await ws.send(json.dumps({"type": "error", "ts": time.time(), "id": req_id, "payload": {"ok": False, "error": "transport_external_only"}}))
+                if t in ("play", "stop", "continue"):
+                    # Allow transport control only when using internal clock
+                    if conductor.clock_source == "internal":
+                        if t == "play":
+                            conductor.do_play()
+                        elif t == "continue":
+                            conductor.do_continue()
+                        else:
+                            conductor.do_stop()
+                        await ws.send(json.dumps({"type": "ack", "ts": time.time(), "id": req_id, "payload": {"ok": True}}))
+                    else:
+                        # Transport is device-controlled in external mode
+                        await ws.send(json.dumps({"type": "error", "ts": time.time(), "id": req_id, "payload": {"ok": False, "error": "transport_external_only"}}))
                 
                 elif t == "subscribe":
                     await ws.send(json.dumps({"type": "ack", "ts": time.time(), "id": req_id, "payload": {"ok": True, "subscribed": True}}))

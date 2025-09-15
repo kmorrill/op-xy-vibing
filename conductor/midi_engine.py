@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 import random
+import math
 
 
 @dataclass
@@ -73,6 +74,11 @@ class Engine:
         self.cc_limit_per_tick_track: int = int(limits.get("cc_per_tick_track", 1_000_000))
         # Deterministic RNG for probability-based events
         self._rng = random.Random(0)
+        # Per-LFO internal state (e.g., sample-hold current value and last phase)
+        # Keyed by trackIndex:lfoId
+        self._lfo_state: Dict[str, Dict[str, Any]] = {}
+        # Snapshot of live LFOs computed on last tick
+        self._lfos_now: List[Dict[str, Any]] = []
 
     # --- Public control ---
     def load(self, doc: Dict[str, Any]) -> None:
@@ -90,6 +96,8 @@ class Engine:
     def start(self) -> None:
         self.playing = True
         self._started = True
+        # Reset LFO internal state on transport start
+        self._lfo_state.clear()
 
     def stop(self) -> None:
         # Emit All Notes Off across channels and clear ledger
@@ -131,6 +139,12 @@ class Engine:
         for ch, ent in summary.items():
             ent["pitches"].sort()
         return summary
+
+    def get_lfo_snapshot(self) -> List[Dict[str, Any]]:
+        # Return shallow copy of most recent LFO live readings
+        # Schema: { track:int, lfoId:str, destCtrl:int|None, destString:str|None, channel:int,
+        #           shape:str, rate:dict, depth:int, offset:int, center:int, active:bool, value:int }
+        return [dict(x) for x in (self._lfos_now or [])]
 
     # --- Internals ---
     def _emit_due_ons(self, tick: int) -> None:
@@ -370,13 +384,26 @@ class Engine:
         }
         tracks = doc.get("tracks", [])
         # Determine each track's pattern loop length in bars
-        for tr in tracks:
+        # Reset per-tick LFO snapshot
+        self._lfos_now = []
+        for ti, tr in enumerate(tracks):
             ch = int(tr.get("midiChannel", 0))
             pat = tr.get("pattern", {})
             length_bars = max(1, int(pat.get("lengthBars", 1)))
-            # Base values from ccLanes — high-resolution per tick with interpolation
-            base_values: Dict[int, int] = {}
-            base_value_channel_override: Dict[int, int] = {}
+            period = max(1, bar_ticks * length_bars)
+
+            # Helper conversions
+            bpm = float(meta.get("tempo", 120))
+            ppq = int(meta.get("ppq", 96))
+            ticks_per_sec = (ppq * bpm) / 60.0
+            ticks_per_ms = ticks_per_sec / 1000.0
+            pos_in_bar_ticks = tick % bar_ticks if bar_ticks > 0 else 0
+            pos_in_period_ticks = tick % period
+
+            # Base values and optional range per (send_ch, control)
+            base_by_target: Dict[Tuple[int, int], int] = {}
+            range_by_target: Dict[Tuple[int, int], Tuple[int, int]] = {}
+
             cc_lanes = tr.get("ccLanes") or []
             if isinstance(cc_lanes, list):
                 for lane in cc_lanes:
@@ -396,7 +423,6 @@ class Engine:
                         if not isinstance(pts, list) or len(pts) == 0:
                             continue
                         # Convert points to absolute tick positions within the pattern period
-                        period = max(1, bar_ticks * length_bars)
                         pts_conv: List[Tuple[int, int, str]] = []  # (tick_in_period, value, curve)
                         for p in pts:
                             t = p.get("t", {}) or {}
@@ -412,7 +438,7 @@ class Engine:
                         if not pts_conv:
                             continue
                         pts_conv.sort(key=lambda x: x[0])
-                        pos = tick % period
+                        pos = pos_in_period_ticks
                         # Find left and right points bracketing pos (circular)
                         left_i = None
                         for i, (tt, _vv, _cv) in enumerate(pts_conv):
@@ -454,126 +480,299 @@ class Engine:
                                     eased = frac
                             base_val = int(round(v_left + (v_right - v_left) * eased))
                         # Apply optional lane range clamp, then 0..127
+                        send_ch_lane = ch
+                        if isinstance(lane.get("channel"), int) and 0 <= int(lane.get("channel")) <= 15:
+                            send_ch_lane = int(lane.get("channel"))
                         rng = lane.get("range")
+                        lo_hi: Tuple[int, int] | None = None
                         if isinstance(rng, list) and len(rng) == 2:
                             try:
                                 lo = int(rng[0]); hi = int(rng[1])
                                 if lo > hi:
                                     lo, hi = hi, lo
                                 base_val = max(lo, min(hi, base_val))
+                                lo_hi = (max(0, min(127, lo)), max(0, min(127, hi)))
                             except Exception:
                                 pass
-                        base_values[int(control)] = max(0, min(127, int(base_val)))
-                        # Optional per-lane MIDI channel override
-                        if isinstance(lane.get("channel"), int) and 0 <= int(lane.get("channel")) <= 15:
-                            base_value_channel_override[int(control)] = int(lane.get("channel"))
+                        base_val = max(0, min(127, int(base_val)))
+                        key_t = (send_ch_lane, int(control))
+                        base_by_target[key_t] = base_val
+                        if lo_hi is not None:
+                            prev = range_by_target.get(key_t)
+                            if prev is None:
+                                range_by_target[key_t] = lo_hi
+                            else:
+                                range_by_target[key_t] = (max(prev[0], lo_hi[0]), min(prev[1], lo_hi[1]))
                     except Exception:
                         continue
 
-            # LFO offsets (triangle only; rate sync values like '1/8' supported minimally)
+            # LFO contributions (full feature set)
             lfos = tr.get("lfos") or []
-            lfo_offsets: Dict[int, int] = {}
+            # Accumulate relative offsets per target; and remember if any LFO touched target
+            lfo_offset_sum: Dict[Tuple[int, int], float] = {}
             if isinstance(lfos, list):
                 for lf in lfos:
                     try:
-                        dest = str(lf.get("dest", ""))
-                        control = None
-                        if dest.startswith("cc:"):
-                            control = int(dest.split(":", 1)[1])
-                        elif dest.startswith("name:"):
-                            control = name_cc.get(dest.split(":", 1)[1])
+                        dest = lf.get("dest")
+                        if dest is None:
+                            continue
+                        if isinstance(dest, int):
+                            control = int(dest)
+                        else:
+                            dstr = str(dest)
+                            if dstr.startswith("cc:"):
+                                control = int(dstr.split(":", 1)[1])
+                            elif dstr.startswith("name:"):
+                                control = name_cc.get(dstr.split(":", 1)[1])
+                            else:
+                                control = None
                         if control is None:
                             continue
-                        depth = int(lf.get("depth", 0))
+                        send_ch_lfo = ch
+                        if isinstance(lf.get("channel"), int) and 0 <= int(lf.get("channel")) <= 15:
+                            send_ch_lfo = int(lf.get("channel"))
+
+                        depth = max(0, min(127, int(lf.get("depth", 0))))
+                        amp = 0.5 * float(depth)  # peak-to-peak specified; use half as amplitude
                         rate = lf.get("rate", {}) or {}
-                        sync = rate.get("sync") if isinstance(rate, dict) else None
-                        shape = str(lf.get("shape", "triangle"))
-                        # Only triangle supported in MVP
-                        if shape != "triangle":
-                            continue
-                        # Compute steps per cycle from sync string like '1/8'
-                        steps_per_cycle = 0
-                        if isinstance(sync, str) and "/" in sync:
-                            # In 4/4 with spb steps per bar, 1/n note = spb/n steps per cycle
+                        # ticks per cycle
+                        tpc: float = 0.0
+                        if isinstance(rate, dict) and "hz" in rate:
+                            hz = float(rate.get("hz", 0.0) or 0.0)
+                            if hz > 0 and ticks_per_sec > 0:
+                                tpc = ticks_per_sec / hz
+                        if tpc <= 0.0 and isinstance(rate, dict) and isinstance(rate.get("sync"), str):
+                            sync = str(rate.get("sync"))
+                            # Parse like '1/8', optional 'T' suffix for triplet
+                            denom = None
                             try:
-                                denom = int(sync.split("/", 1)[1])
-                                if denom > 0:
-                                    steps_per_cycle = max(1, int(spb // denom))
+                                s = sync.strip().upper()
+                                triple = s.endswith('T')
+                                if triple:
+                                    s = s[:-1]
+                                if "/" in s:
+                                    denom = int(s.split("/", 1)[1])
+                                if denom and denom > 0:
+                                    eff = float(denom)
+                                    if triple:
+                                        eff = eff * 3.0 / 2.0  # e.g., 1/8T -> 12 per bar
+                                    tpc = float(bar_ticks) / eff if bar_ticks > 0 else 0.0
                             except Exception:
-                                steps_per_cycle = 0
-                        if steps_per_cycle <= 0:
-                            # Default to 1/8
-                            steps_per_cycle = 2
-                        # Triangle from -depth..+depth. Phase resets each bar
-                        # Use fractional position within the current bar cycle
-                        phase = (tick // max(1, self.step_ticks)) % steps_per_cycle
-                        half = steps_per_cycle / 2.0
-                        if phase < half:
-                            # rising from -1 to +1 across first half
-                            norm = (phase / half) * 2 - 1
+                                tpc = 0.0
+                        if tpc <= 0.0:
+                            # Default conservative: 1/8 note
+                            tpc = float(bar_ticks) / 8.0 if bar_ticks > 0 else 1.0
+
+                        # Phase and shape
+                        phase = float(lf.get("phase", 0.0) or 0.0)
+                        # Per spec, reset at bar boundaries: measure phase within current bar
+                        # fraction within current cycle (0..1)
+                        cycle_pos_ticks = (pos_in_bar_ticks + (phase * tpc)) % tpc if tpc > 0 else 0.0
+                        frac = (cycle_pos_ticks / tpc) if tpc > 0 else 0.0
+
+                        shape = str(lf.get("shape", "triangle")).lower()
+                        # normalized -1..+1 value
+                        if shape == "sine":
+                            norm = math.sin(2.0 * math.pi * frac)
+                        elif shape in ("triangle", "tri"):
+                            norm = 1.0 - 4.0 * abs(frac - 0.5)
+                        elif shape in ("ramp", "rise"):
+                            norm = 2.0 * frac - 1.0
+                        elif shape in ("saw", "fall"):
+                            norm = 1.0 - 2.0 * frac
+                        elif shape in ("square", "pulse"):
+                            norm = 1.0 if frac >= 0.5 else -1.0
+                        elif shape in ("samplehold", "sample-and-hold", "s&h"):
+                            key = f"{ti}:{str(lf.get('id') or (str(control)+'@'+str(send_ch_lfo)))}"
+                            st = self._lfo_state.setdefault(key, {"last_frac": None, "value": 0.0})
+                            last_frac = st.get("last_frac")
+                            # Detect cycle wrap
+                            if last_frac is None or frac < float(last_frac):
+                                st["value"] = (self._rng.random() * 2.0) - 1.0  # [-1,1]
+                            st["last_frac"] = frac
+                            norm = float(st.get("value", 0.0))
                         else:
-                            # falling from +1 to -1 across second half
-                            norm = ((steps_per_cycle - phase) / half) * 2 - 1
-                        lfo = int(round(norm * depth))
-                        lfo_offsets[int(control)] = lfo
+                            # default to triangle
+                            norm = 1.0 - 4.0 * abs(frac - 0.5)
+
+                        # Active windows support: if provided, only active when within any window in the pattern period
+                        active = True
+                        wins = lf.get("on")
+                        age_from_window_ms = None
+                        if isinstance(wins, list) and len(wins) > 0:
+                            active = False
+                            for w in wins:
+                                try:
+                                    fr = w.get("from", {}) or {}
+                                    to = w.get("to", {}) or {}
+                                    if "ticks" in fr:
+                                        a = int(fr.get("ticks", 0)) % period
+                                    else:
+                                        a = ((int(fr.get("bar", 0)) % max(1, length_bars)) * bar_ticks + (int(fr.get("step", 0)) % spb) * self.step_ticks) % period
+                                    if "ticks" in to:
+                                        b = int(to.get("ticks", 0)) % period
+                                    else:
+                                        b = ((int(to.get("bar", 0)) % max(1, length_bars)) * bar_ticks + (int(to.get("step", 0)) % spb) * self.step_ticks) % period
+                                except Exception:
+                                    continue
+                                if a <= b:
+                                    in_win = (a <= pos_in_period_ticks <= b)
+                                    age_ticks = (pos_in_period_ticks - a) if in_win else None
+                                else:
+                                    # wrap-around window
+                                    in_win = (pos_in_period_ticks >= a or pos_in_period_ticks <= b)
+                                    if pos_in_period_ticks >= a:
+                                        age_ticks = pos_in_period_ticks - a
+                                    elif pos_in_period_ticks <= b:
+                                        age_ticks = (period - a) + pos_in_period_ticks
+                                    else:
+                                        age_ticks = None
+                                if in_win:
+                                    active = True
+                                    if isinstance(age_ticks, (int, float)) and ticks_per_ms > 0:
+                                        age_from_window_ms = float(age_ticks) / ticks_per_ms
+                                    break
+                        if not active:
+                            # Record inactive reading near center for UI clarity
+                            try:
+                                center_for_ui = base_by_target.get((send_ch_lfo, int(control)))
+                                if center_for_ui is None:
+                                    center_for_ui = int(lf.get("offset", 64) or 64)
+                            except Exception:
+                                center_for_ui = int(lf.get("offset", 64) or 64)
+                            self._lfos_now.append({
+                                "track": int(ti),
+                                "lfoId": str(lf.get("id", "")),
+                                "destCtrl": int(control) if control is not None else None,
+                                "destString": str(dest) if isinstance(dest, str) else None,
+                                "channel": int(send_ch_lfo),
+                                "shape": shape,
+                                "rate": lf.get("rate", {}),
+                                "depth": int(depth),
+                                "offset": int(lf.get("offset", 64) or 64),
+                                "center": int(center_for_ui),
+                                "active": False,
+                                "value": int(center_for_ui),
+                            })
+                            continue
+
+                        # Fade-in
+                        fade_ms = int(lf.get("fadeMs", 0) or 0)
+                        if fade_ms > 0 and ticks_per_ms > 0:
+                            # Consider both since-bar and since-window age when available, take the smaller
+                            age_ms_bar = float(pos_in_bar_ticks) / ticks_per_ms
+                            age_ms = age_ms_bar
+                            if age_from_window_ms is not None:
+                                age_ms = min(age_ms, float(age_from_window_ms))
+                            gain = max(0.0, min(1.0, age_ms / float(fade_ms)))
+                        else:
+                            gain = 1.0
+
+                        # Accumulate contribution for this target
+                        key_t = (send_ch_lfo, int(control))
+                        lfo_offset_sum[key_t] = lfo_offset_sum.get(key_t, 0.0) + (norm * amp * gain)
+
+                        # For UI: compute estimated instantaneous absolute value for this LFO alone
+                        try:
+                            center_for_ui = base_by_target.get(key_t)
+                            if center_for_ui is None:
+                                center_for_ui = int(lf.get("offset", 64) or 64)
+                        except Exception:
+                            center_for_ui = int(lf.get("offset", 64) or 64)
+                        value_ui = float(center_for_ui) + (norm * amp * gain)
+                        rng_ui = range_by_target.get(key_t)
+                        if isinstance(rng_ui, tuple):
+                            lo, hi = rng_ui
+                            if lo > hi:
+                                lo, hi = hi, lo
+                            value_ui = max(int(lo), min(int(hi), int(round(value_ui))))
+                        value_ui = int(max(0, min(127, int(round(value_ui)))))
+                        self._lfos_now.append({
+                            "track": int(ti),
+                            "lfoId": str(lf.get("id", "")),
+                            "destCtrl": int(control) if control is not None else None,
+                            "destString": str(dest) if isinstance(dest, str) else None,
+                            "channel": int(send_ch_lfo),
+                            "shape": shape,
+                            "rate": lf.get("rate", {}),
+                            "depth": int(depth),
+                            "offset": int(lf.get("offset", 64) or 64),
+                            "center": int(center_for_ui),
+                            "active": True,
+                            "value": int(value_ui),
+                        })
                     except Exception:
                         continue
 
-            # Merge base + lfo offset, clamp
-            merged: List[Tuple[int, int]] = []
-            all_controls = set(base_values.keys()) | set(lfo_offsets.keys())
-            for ctrl in sorted(all_controls):
-                base = base_values.get(ctrl, 64)
-                off = lfo_offsets.get(ctrl, 0)
-                # LFO offset parameter (baseline) if provided on the LFO spec
-                # We approximate by looking for any lfo targeting this ctrl and reading its 'offset'
-                lfo_offset_baseline = 0
-                try:
-                    for lf in lfos:
-                        d = str(lf.get("dest", ""))
-                        c = None
-                        if d.startswith("cc:"):
-                            c = int(d.split(":", 1)[1])
-                        elif d.startswith("name:"):
-                            c = name_cc.get(d.split(":", 1)[1])
-                        if c == ctrl:
-                            lfo_offset_baseline = int(lf.get("offset", 0))
-                            break
-                except Exception:
-                    pass
-                value = max(0, min(127, int(lfo_offset_baseline + base + off)))
-                merged.append((int(ctrl), value))
+            # Merge: base center if present, else lfo.offset or 64; then add accumulated offsets; clamp to 0..127 and optional lane range
+            merged: List[Tuple[int, int, int]] = []  # (send_ch, ctrl, value)
+            all_targets = set(base_by_target.keys()) | set(lfo_offset_sum.keys())
+            for key_t in sorted(all_targets):
+                send_ch_t, ctrl_t = key_t
+                base_center = base_by_target.get(key_t)
+                if base_center is None:
+                    # If any LFO covers this target, consider its offset as center if provided; else 64
+                    center = 64
+                    try:
+                        for lf in (lfos or []):
+                            dest = lf.get("dest")
+                            ccnum = None
+                            if isinstance(dest, int):
+                                ccnum = int(dest)
+                            elif isinstance(dest, str):
+                                if dest.startswith("cc:"):
+                                    ccnum = int(dest.split(":", 1)[1])
+                                elif dest.startswith("name:"):
+                                    ccnum = name_cc.get(dest.split(":", 1)[1])
+                            lch = ch
+                            if isinstance(lf.get("channel"), int) and 0 <= int(lf.get("channel")) <= 15:
+                                lch = int(lf.get("channel"))
+                            if ccnum == ctrl_t and lch == send_ch_t:
+                                center = int(lf.get("offset", 64) or 64)
+                                break
+                    except Exception:
+                        pass
+                else:
+                    center = int(base_center)
+
+                offset_sum = lfo_offset_sum.get(key_t, 0.0)
+                value = int(round(center + offset_sum))
+                # Optional per-lane range clamp if any lanes constrained this target
+                rng = range_by_target.get(key_t)
+                if isinstance(rng, tuple):
+                    lo, hi = rng
+                    if lo > hi:
+                        lo, hi = hi, lo
+                    value = max(int(lo), min(int(hi), int(value)))
+                # 0..127
+                value = max(0, min(127, int(value)))
+                merged.append((int(send_ch_t), int(ctrl_t), int(value)))
 
             # Apply simple CC rate guards: per-track and global limits per tick
             # Prefer to send earlier controls first; shed extras and count them
-            sent_this_tick_global = 0
-            for tkey in list(self._cc_sent_tick.keys()) if hasattr(self, "_cc_sent_tick") else []:
-                pass
             # Count CCs already sent this tick globally (reset at new tick)
             if not hasattr(self, "_last_cc_tick") or self._last_cc_tick != tick:
                 self._last_cc_tick = tick
                 self._cc_sent_tick_global = 0
                 self._cc_sent_tick_per_track: Dict[int, int] = {}
 
-            for ctrl, value in merged:
-                # Check per-track limit
-                send_ch = int(base_value_channel_override.get(ctrl, ch))
-                per_track = self._cc_sent_tick_per_track.get(send_ch, 0)
+            for send_ch_t, ctrl_t, value in merged:
+                per_track = self._cc_sent_tick_per_track.get(send_ch_t, 0)
                 if per_track >= self.cc_limit_per_tick_track or self._cc_sent_tick_global >= self.cc_limit_per_tick_global:
                     self.metrics["shed_cc"] += 1
                     continue
-                key = (send_ch, int(ctrl))
+                key = (send_ch_t, int(ctrl_t))
                 if self._last_cc.get(key) == value:
                     # unchanged; skip without counting toward limit
                     continue
                 # Send CC
                 try:
-                    self.sink.control_change(send_ch, int(ctrl), value)
+                    self.sink.control_change(send_ch_t, int(ctrl_t), value)
                     self.metrics["msgs_cc"] += 1
                     self._last_cc[key] = value
                     # increment counters
                     self._cc_sent_tick_global += 1
-                    self._cc_sent_tick_per_track[send_ch] = per_track + 1
+                    self._cc_sent_tick_per_track[send_ch_t] = per_track + 1
                 except Exception:
                     # treat as shed if send fails
                     self.metrics["shed_cc"] += 1

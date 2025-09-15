@@ -35,6 +35,10 @@
 
     <div class="row">
       <label><input id="applyNow" type="checkbox" /> apply now (structural)</label>
+      <button id="btnClockInternal">Use internal clock</button>
+      <button id="btnClockExternal">Use external clock</button>
+      <button id="btnPlay">Play (internal)</button>
+      <button id="btnStop">Stop (internal)</button>
       <span style="font-size:12px;color:#666">edits send as patches; structural applies next bar unless checked</span>
     </div>
 
@@ -387,12 +391,76 @@
         });
         if (!panel.children.length) { const p=document.createElement('div'); p.textContent = 'No ccLanes found in current loop.'; panel.appendChild(p); }
         host.appendChild(panel);
+
+        // LFOs (live) panel
+        let lfoNow = Array.isArray(state.lfoNow) ? state.lfoNow : [];
+        // Fallback: if runtime hasn't reported live LFOs yet, synthesize from doc so users can see what's configured
+        if ((!lfoNow || lfoNow.length===0) && root && Array.isArray(root.tracks)) {
+          lfoNow = [];
+          root.tracks.forEach((tr, ti) => {
+            const ch = (typeof tr.midiChannel==='number')?tr.midiChannel:0;
+            const lfos = Array.isArray(tr.lfos) ? tr.lfos : [];
+            lfos.forEach(lf => {
+              lfoNow.push({
+                track: ti, lfoId: String(lf.id||''), destString: (typeof lf.dest==='string'? lf.dest:null),
+                destCtrl: (typeof lf.dest==='number'? (lf.dest|0) : null), channel: ch,
+                shape: String(lf.shape||'triangle'), rate: lf.rate||{}, depth: (lf.depth|0)||0,
+                offset: (lf.offset|0)||64, center: (lf.offset|0)||64, active: false, value: (lf.offset|0)||64,
+              });
+            });
+          });
+        }
+        const panelLfo = document.createElement('div'); panelLfo.style.marginTop='12px';
+        const titleL = document.createElement('h3'); titleL.textContent = 'LFOs (live)'; panelLfo.appendChild(titleL);
+        // Group by track index
+        const byTrack = new Map();
+        for (const ent of lfoNow) { const ti = (typeof ent.track==='number')? (ent.track|0) : -1; if (!byTrack.has(ti)) byTrack.set(ti, []); byTrack.get(ti).push(ent); }
+        const tracksArr = root.tracks || [];
+        const rateLabel = (rate) => {
+          if (!rate || typeof rate !== 'object') return '';
+          if (rate.hz != null) { const n=Number(rate.hz)||0; return `${(Math.round(n*100)/100)} Hz`; }
+          if (rate.sync != null) { return String(rate.sync); }
+          return '';
+        };
+        const destLabel = (ent) => {
+          if (ent.destString) return ent.destString;
+          if (ent.destCtrl != null) return 'cc:'+String(ent.destCtrl);
+          return '?';
+        };
+        // Render per-track LFO cards
+        Array.from(byTrack.keys()).sort((a,b)=>a-b).forEach(ti => {
+          const card = document.createElement('div'); card.className='track';
+          const tr = tracksArr[ti] || {}; const ch = (typeof tr.midiChannel==='number')?tr.midiChannel: (byTrack.get(ti)[0]?.channel ?? 0);
+          const h = document.createElement('h3'); h.textContent = `${tr.name||tr.id||('Track '+ti)} (ch ${ch})`; card.appendChild(h);
+          byTrack.get(ti).forEach(ent => {
+            const row = document.createElement('div'); row.style.display='flex'; row.style.alignItems='center'; row.style.gap='8px'; row.style.margin='4px 0';
+            const label = document.createElement('div'); label.style.width='320px'; label.style.fontSize='12px'; label.style.color='#444';
+            const act = ent.active ? '' : ' (inactive)';
+            label.textContent = `${ent.lfoId||'lfo'}  dest=${destLabel(ent)}  ch=${ent.channel}  shape=${ent.shape}  rate=${rateLabel(ent.rate)}${act}`;
+            const barWrap = document.createElement('div'); barWrap.style.flex='1'; barWrap.style.height='8px'; barWrap.style.background = ent.active ? '#eee' : '#f3f3f3'; barWrap.style.borderRadius='4px'; barWrap.style.position='relative';
+            const bar = document.createElement('div'); bar.style.height='8px'; bar.style.borderRadius='4px'; bar.style.background= ent.active ? '#00b894' : '#bbb'; bar.style.width=(Math.round(((ent.value||0)/127)*100))+'%';
+            // center marker
+            const center = Math.max(0, Math.min(127, (ent.center||64)));
+            const marker = document.createElement('div'); marker.style.position='absolute'; marker.style.left = (Math.round((center/127)*100))+'%'; marker.style.top='-2px'; marker.style.width='2px'; marker.style.height='12px'; marker.style.background='#333'; marker.style.opacity='0.4';
+            barWrap.appendChild(bar); barWrap.appendChild(marker);
+            const val = document.createElement('div'); val.style.width='48px'; val.style.textAlign='right'; val.style.fontFamily='ui-monospace,Menlo,monospace'; val.style.fontSize='12px'; val.textContent = String(ent.value ?? '—');
+            row.appendChild(label); row.appendChild(barWrap); row.appendChild(val);
+            card.appendChild(row);
+          });
+          panelLfo.appendChild(card);
+        });
+        if (byTrack.size === 0) { const p=document.createElement('div'); p.textContent = 'No LFOs found in current loop.'; panelLfo.appendChild(p); }
+        host.appendChild(panelLfo);
       }
 
 
       // Controls
       // Transport is device-controlled; UI does not send play/stop
       document.getElementById('btnReconnect').onclick = () => { try { ws && ws.close(); } catch(e){}; connect(); };
+      document.getElementById('btnClockInternal').onclick = () => { try { send({type:'setClockSource', source:'internal'}); } catch(e){} };
+      document.getElementById('btnClockExternal').onclick = () => { try { send({type:'setClockSource', source:'external'}); } catch(e){} };
+      document.getElementById('btnPlay').onclick = () => { try { send({type:'play'}); } catch(e){} };
+      document.getElementById('btnStop').onclick = () => { try { send({type:'stop'}); } catch(e){} };
       // Simplified: Push tempo sends CC80 mapping; device remains master
       document.getElementById('btnSetTempo').onclick = () => {
         if (!ws || ws.readyState !== 1) return;

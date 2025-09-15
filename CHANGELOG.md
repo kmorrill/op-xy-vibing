@@ -1,5 +1,20 @@
 # Changelog – UI External Clock + CC80 Tempo
 
+## LFO Feature Set
+### Added
+- Full LFO support in playback engine: shapes sine, triangle, ramp (rise), saw (fall), square and sample-hold.
+- Dual rate modes: musical sync (e.g., 1/8, 1/8T) and absolute Hz; per-spec phase (0..1), offset, fade-in (ms), and active windows.
+- Per-tick evaluation with deterministic sample-hold and bar-boundary phase reset.
+- Live CC merging semantics: LFOs modulate around ccLane base if present; otherwise around `offset` (default 64).
+- Post-merge clamping honors any ccLane `range` for the same target.
+
+### Changed
+- CC emission now aggregates per-target contributions over channel+CC pairs, with unchanged-value dedupe and existing per-tick rate guards.
+
+### How to verify
+- Use `conductor/tests/test_lfo_engine.py` for core shape/params sanity (no device needed).
+- In UI, watch Automation panel for live CC modulation when a loop with `lfos` is loaded.
+
 ## Added
 - Web UI (Safari) to view patterns per track and control transport/tempo.
 - External clock support: Conductor listens to OP‑XY MIDI Start/Stop/Continue/SPP/Clock; UI shows device BPM in real time.
@@ -16,4 +31,3 @@
 - Run Conductor (external clock) and open UI: tempo follows device changes.
 - In UI, type BPM and Push tempo: device BPM changes; device knob remains responsive.
 - Run velocity A/B: loud, rest, quiet, loud, rest, quiet; stops cleanly.
-

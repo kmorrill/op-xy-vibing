@@ -64,18 +64,18 @@
           "on": [{ "from": { "bar": 8, "step": 0 }, "to": { "bar": 11, "step": 15 } }]
         },
         {
-          "id": "b13-16-vol-square-1_8T",
-          "dest": "name:track_volume",
-          "depth": 38,
+          "id": "b13-16-send1-square-1_8T",
+          "dest": "name:send_fx1",
+          "depth": 40,
           "rate": { "sync": "1/8T" },
           "shape": "square",
           "offset": 64,
           "on": [{ "from": { "bar": 12, "step": 0 }, "to": { "bar": 15, "step": 15 } }]
         },
         {
-          "id": "b17-20-engvol-s&h-1.5hz",
-          "dest": "name:engine_volume",
-          "depth": 30,
+          "id": "b17-20-param1-s&h-1.5hz",
+          "dest": "name:param1",
+          "depth": 24,
           "rate": { "hz": 1.5 },
           "shape": "samplehold",
           "offset": 64,
@@ -87,3 +87,4 @@
   ],
   "docVersion": 0
 }
+
