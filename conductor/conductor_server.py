@@ -33,21 +33,12 @@ def _atomic_write_json(path: str, obj: Dict[str, Any]) -> None:
             pass
 
 
-def _default_loop_doc() -> Dict[str, Any]:
-    return {
-        "version": "opxyloop-1.0",
-        "meta": {"tempo": 100, "ppq": 96, "stepsPerBar": 16},
-        "tracks": [
-            {
-                "id": "t1",
-                "name": "Track 1",
-                "type": "sampler",
-                "midiChannel": 0,
-                "pattern": {"lengthBars": 1, "steps": []}
-            }
-        ],
-        "docVersion": 0,
-    }
+"""Conductor server for OP-XY loops.
+
+This module intentionally does not embed a default loop JSON. The loop file
+should be provided on disk (e.g., loop.json in repo). If missing, loading
+will raise FileNotFoundError.
+"""
 
 
 def _load_json(path: str) -> Dict[str, Any]:
@@ -55,9 +46,7 @@ def _load_json(path: str) -> Dict[str, Any]:
     d = os.path.dirname(os.path.abspath(path)) or "."
     os.makedirs(d, exist_ok=True)
     if not os.path.exists(path):
-        doc = _default_loop_doc()
-        _atomic_write_json(path, doc)
-        return doc
+        raise FileNotFoundError(f"loop file not found: {path}")
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
