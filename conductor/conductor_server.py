@@ -14,7 +14,6 @@ from conductor.clock import InternalClock
 from conductor.midi_engine import Engine
 from conductor.midi_out import MidoSink, open_mido_output, open_mido_input
 from conductor.validator import validate_loop, canonicalize
-from conductor.ws_server import start_ws_server
 from conductor.patch_utils import apply_patch as apply_json_patch
 from conductor.tempo_map import bpm_to_cc80
 
@@ -34,7 +33,31 @@ def _atomic_write_json(path: str, obj: Dict[str, Any]) -> None:
             pass
 
 
+def _default_loop_doc() -> Dict[str, Any]:
+    return {
+        "version": "opxyloop-1.0",
+        "meta": {"tempo": 100, "ppq": 96, "stepsPerBar": 16},
+        "tracks": [
+            {
+                "id": "t1",
+                "name": "Track 1",
+                "type": "sampler",
+                "midiChannel": 0,
+                "pattern": {"lengthBars": 1, "steps": []}
+            }
+        ],
+        "docVersion": 0,
+    }
+
+
 def _load_json(path: str) -> Dict[str, Any]:
+    # Ensure parent dir exists
+    d = os.path.dirname(os.path.abspath(path)) or "."
+    os.makedirs(d, exist_ok=True)
+    if not os.path.exists(path):
+        doc = _default_loop_doc()
+        _atomic_write_json(path, doc)
+        return doc
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -44,18 +67,32 @@ class Conductor:
         self.loop_path = loop_path
         self.doc: Dict[str, Any] = _load_json(loop_path)
         self.doc_version = int(self.doc.get("docVersion", 0))
+        # Track file mtime to detect external edits
+        try:
+            self._file_mtime = os.path.getmtime(self.loop_path)
+        except Exception:
+            self._file_mtime = time.time()
         self._port_filter = port_filter
-        self.out = open_mido_output(port_filter)
+        try:
+            self.out = open_mido_output(port_filter)
+        except Exception:
+            self.out = open_mido_output(None)
         self.clock_source = clock_source if clock_source in ("internal", "external") else "internal"
-        self.sink = MidoSink(self.out, also_send_clock=(self.clock_source == "internal"))
+        # Never send MIDI Clock out; device remains master. Only send CC80 for tempo nudges.
+        self.sink = MidoSink(self.out, also_send_clock=False)
         self.engine = Engine(self.sink)
         self.engine.load(self.doc)
         self.playing = False
-        self._lock = threading.Lock()
+        # Use reentrant lock: WS handler holds the lock and calls methods
+        # that also acquire it (e.g., do_replace_json via _schedule_or_apply).
+        # A non-reentrant Lock deadlocks in that path.
+        self._lock = threading.RLock()
         # External BPM estimation (when clock_source == 'external')
         self._ext_last_ts: Optional[float] = None
         self._ext_interval_ema: Optional[float] = None
         self._ext_bpm: float = float(self.doc.get("meta", {}).get("tempo", 120))
+        # External transport heuristics
+        self._last_spp_ts: Optional[float] = None
 
         def on_clock_pulse(_):
             # Adapt 24 PPQN -> meta.ppq
@@ -68,12 +105,8 @@ class Conductor:
                 self._maybe_apply_pending()
 
         def send_midi_clock():
-            import mido
-
-            try:
-                self.out.send(mido.Message("clock"))
-            except Exception:
-                pass
+            # Intentionally no-op: do not send MIDI clock to device
+            return
 
         # Pending structural doc replace (apply at next bar boundary)
         self._pending_doc: Optional[Dict[str, Any]] = None
@@ -86,7 +119,18 @@ class Conductor:
             # External clock: listen for transport + MIDI clock on input
             def on_input(msg):
                 try:
+                    # Debug (suppress high-frequency clock spam)
+                    try:
+                        if getattr(msg, 'type', None) != 'clock':
+                            print(f"[midi-in] {msg}", flush=True)
+                    except Exception:
+                        pass
                     if msg.type == "start":
+                        # Start from bar 0 unless SPP arrives
+                        try:
+                            self.engine.tick = 0
+                        except Exception:
+                            pass
                         self.do_play()
                     elif msg.type == "continue":
                         self.do_continue()
@@ -96,6 +140,7 @@ class Conductor:
                         meta = self.doc.get("meta", {})
                         ppq = int(meta.get("ppq", 96))
                         self.engine.tick = int(msg.pos * (ppq / 4))
+                        self._last_spp_ts = time.time()
                     elif msg.type == "clock":
                         now = time.time()
                         if self._ext_last_ts is not None:
@@ -107,12 +152,32 @@ class Conductor:
                         meta = self.doc.get("meta", {})
                         ppq = int(meta.get("ppq", 96))
                         ratio = max(1, ppq // 24)
-                        for _ in range(ratio):
-                            self.engine.on_tick(self.engine.tick + 1)
-                            self._maybe_apply_pending()
+                        # If device sent SPP very recently but no Start/Continue observed (attach mid-play), arm playback
+                        if not self.playing and self._last_spp_ts and (now - self._last_spp_ts) < 1.0:
+                            try:
+                                print("[midi-in] inferred-continue after SPP", flush=True)
+                                self.do_continue()
+                            except Exception:
+                                pass
+                        # Only advance engine ticks while playing
+                        if self.playing:
+                            for _ in range(ratio):
+                                self.engine.on_tick(self.engine.tick + 1)
+                                self._maybe_apply_pending()
                 except Exception:
                     pass
-            self.inp = open_mido_input(port_filter, callback=on_input)
+            try:
+                self.inp = open_mido_input(port_filter, callback=on_input)
+            except Exception:
+                self.inp = None
+                def _retry_in():
+                    while self.inp is None:
+                        try:
+                            self.inp = open_mido_input(self._port_filter, callback=on_input)
+                            break
+                        except Exception:
+                            time.sleep(1.5)
+                threading.Thread(target=_retry_in, daemon=True).start()
 
     # --- State/doc ---
     def get_state(self) -> Dict[str, Any]:
@@ -148,7 +213,7 @@ class Conductor:
 
             canon_bytes = json.dumps(self.doc, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
             sha = hashlib.sha256(canon_bytes).hexdigest()
-            return {"docVersion": self.doc_version, "json": self.doc, "sha256": sha}
+            return {"docVersion": self.doc_version, "json": self.doc, "sha256": sha, "path": os.path.abspath(self.loop_path)}
 
     # --- Control ---
     def do_play(self) -> None:
@@ -171,13 +236,7 @@ class Conductor:
             if self.playing:
                 self.engine.stop()  # flush offs + panic
                 self.playing = False
-                # best-effort MIDI stop message
-                try:
-                    import mido
-
-                    self.out.send(mido.Message("stop"))
-                except Exception:
-                    pass
+                # Do not send MIDI transport; device is transport authority
 
     def do_set_tempo(self, bpm: float) -> None:
         if self.clock and self.clock_source == "internal":
@@ -218,7 +277,8 @@ class Conductor:
             self.inp = None
         self.clock_source = source
         # Update sink for MIDI clock sending behavior
-        self.sink.also_send_clock = (self.clock_source == "internal")
+        # Never send clock regardless of source
+        self.sink.also_send_clock = False
         # Recreate clock or input
         if self.clock_source == "internal":
             def on_clock_pulse(_):
@@ -229,11 +289,7 @@ class Conductor:
                     self.engine.on_tick(self.engine.tick + 1)
                     self._maybe_apply_pending()
             def send_midi_clock():
-                import mido
-                try:
-                    self.out.send(mido.Message("clock"))
-                except Exception:
-                    pass
+                return
             self.clock = InternalClock(bpm=float(self.doc.get("meta",{}).get("tempo", 120)), tick_handler=on_clock_pulse, send_midi_clock=send_midi_clock)
             self.clock.start()
             self._ext_last_ts = None; self._ext_interval_ema = None
@@ -280,6 +336,14 @@ class Conductor:
             self.doc_version += 1
             canon["docVersion"] = self.doc_version
             _atomic_write_json(self.loop_path, canon)
+            try:
+                print(f"[ws] saved {self.loop_path} (docVersion={self.doc_version})", flush=True)
+            except Exception:
+                pass
+            try:
+                self._file_mtime = os.path.getmtime(self.loop_path)
+            except Exception:
+                self._file_mtime = time.time()
             self.doc = canon
             self.engine.replace_doc(self.doc)
             return {"ok": True, "docVersion": self.doc_version}
@@ -348,7 +412,9 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
         msg = json.dumps(obj)
         await asyncio.gather(*[c.send(msg) for c in list(clients)], return_exceptions=True)
 
+    last_doc_version = conductor.doc_version
     async def metrics_task():
+        nonlocal last_doc_version
         while True:
             await asyncio.sleep(0.5)
             # Broadcast metrics (tolerate missing internal clock)
@@ -360,6 +426,7 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
                     "payload": {
                         "engine": conductor.engine.get_metrics(),
                         "clock": clock_metrics,
+                        "ws": {"clients": len(clients)},
                     },
                 })
             except Exception:
@@ -369,10 +436,49 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
                 await broadcast({"type": "state", "ts": time.time(), "payload": conductor.get_state()})
             except Exception:
                 pass
+            # Detect external file edits and broadcast updated doc
+            try:
+                m = os.path.getmtime(conductor.loop_path)
+            except Exception:
+                m = None
+            if m and m != getattr(conductor, '_file_mtime', None):
+                try:
+                    loaded = _load_json(conductor.loop_path)
+                    # Compare canonical JSONs
+                    old_canon = json.dumps(conductor.doc, sort_keys=True, separators=(",", ":")).encode("utf-8")
+                    new_canon = json.dumps(loaded, sort_keys=True, separators=(",", ":")).encode("utf-8")
+                    import hashlib
+                    if hashlib.sha256(old_canon).hexdigest() != hashlib.sha256(new_canon).hexdigest():
+                        with conductor._lock:
+                            errs = validate_loop(loaded)
+                            if not errs:
+                                canon = canonicalize(loaded)
+                                conductor.doc_version = int(canon.get("docVersion", conductor.doc_version)) + 1
+                                canon["docVersion"] = conductor.doc_version
+                                conductor.doc = canon
+                                conductor.engine.replace_doc(conductor.doc)
+                        await broadcast({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()})
+                except Exception:
+                    pass
+                conductor._file_mtime = m
+            # Broadcast doc on version change (captures scheduled applies)
+            if conductor.doc_version != last_doc_version:
+                last_doc_version = conductor.doc_version
+                try:
+                    await broadcast({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()})
+                except Exception:
+                    pass
 
-    async def handler(ws, *args):
+    async def handler(ws, *maybe_path):
+        # Log client connection (helps debug UI connect issues)
+        try:
+            ra = getattr(ws, 'remote_address', None)
+            print(f"[ws] client connected: {ra}", flush=True)
+        except Exception:
+            pass
         clients.add(ws)
-        # Send initial doc/state
+        # Send initial hello/doc/state
+        await ws.send(json.dumps({"type": "hello", "ts": time.time(), "payload": {"protocol": 1, "docVersion": conductor.doc_version}}))
         await ws.send(json.dumps({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()}))
         await ws.send(json.dumps({"type": "state", "ts": time.time(), "payload": conductor.get_state()}))
         try:
@@ -382,24 +488,37 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
                 except Exception:
                     continue
                 t = obj.get("type")
-                if t == "play":
-                    conductor.do_play()
-                elif t == "stop":
-                    conductor.do_stop()
-                elif t == "continue":
-                    conductor.do_continue()
+                req_id = obj.get("id")
+                # Debug log incoming command types
+                try:
+                    print(f"[ws] recv type={t}", flush=True)
+                except Exception:
+                    pass
+                if t == "play" or t == "stop" or t == "continue":
+                    # Transport is device-controlled; ignore UI transport commands
+                    await ws.send(json.dumps({"type": "error", "ts": time.time(), "id": req_id, "payload": {"ok": False, "error": "transport_external_only"}}))
+                
+                elif t == "subscribe":
+                    await ws.send(json.dumps({"type": "ack", "ts": time.time(), "id": req_id, "payload": {"ok": True, "subscribed": True}}))
+                elif t == "ping":
+                    await ws.send(json.dumps({"type": "pong", "ts": time.time(), "id": req_id}))
                 elif t == "setTempo":
                     bpm = float(obj.get("bpm", conductor.clock.bpm))
                     conductor.do_set_tempo(bpm)
+                    await ws.send(json.dumps({"type": "ack", "ts": time.time(), "id": req_id, "payload": {"ok": True}}))
                 elif t == "setClockSource":
                     src = obj.get("source", "internal")
                     conductor.do_set_clock_source(str(src))
+                    await ws.send(json.dumps({"type": "ack", "ts": time.time(), "id": req_id, "payload": {"ok": True}}))
                 elif t == "setTempoCC":
                     bpm = float(obj.get("bpm", 0))
                     conductor.do_set_tempo_cc(bpm)
+                    await ws.send(json.dumps({"type": "ack", "ts": time.time(), "id": req_id, "payload": {"ok": True}}))
                 elif t == "getState":
                     # Explicit poll for current state (UI fallback)
                     await ws.send(json.dumps({"type": "state", "ts": time.time(), "payload": conductor.get_state()}))
+                elif t == "getDoc":
+                    await ws.send(json.dumps({"type": "doc", "ts": time.time(), "id": req_id, "payload": conductor.get_doc()}))
                 elif t == "replaceJSON":
                     payload = obj.get("payload", {})
                     base = int(payload.get("baseVersion", -1))
@@ -409,31 +528,47 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
                         # Determine structural by comparing key fields
                         res = conductor._schedule_or_apply(base, new_doc, structural=True, apply_now=apply_now)
                         await ws.send(json.dumps({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()}))
-                        await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": res}) if not res.get("ok") else json.dumps({"type": "ack", "ts": time.time(), "payload": res}))
+                        await ws.send(json.dumps({"type": "error", "ts": time.time(), "id": req_id, "payload": res}) if not res.get("ok") else json.dumps({"type": "ack", "ts": time.time(), "id": req_id, "payload": res}))
                 elif t == "applyPatch":
-                    payload = obj.get("payload", {})
-                    base = int(payload.get("baseVersion", -1))
-                    ops = payload.get("ops")
-                    apply_now = bool(payload.get("applyNow", False))
-                    if not isinstance(ops, list):
-                        await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": {"ok": False, "error": "invalid_ops"}}))
-                    else:
-                        with conductor._lock:
-                            if base != conductor.doc_version:
-                                await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": {"ok": False, "error": "stale", "expected": conductor.doc_version}}))
-                            else:
-                                try:
-                                    patched = apply_json_patch(conductor.doc, ops)
-                                except Exception as e:
-                                    await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": {"ok": False, "error": "patch_apply", "details": str(e)}}))
-                                    patched = None
-                                if isinstance(patched, dict):
-                                    structural = conductor._is_structural_ops(ops)
-                                    res = conductor._schedule_or_apply(conductor.doc_version, patched, structural=structural, apply_now=apply_now)
-                                    if res.get("ok"):
-                                        await ws.send(json.dumps({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()}))
-                                    else:
-                                        await ws.send(json.dumps({"type": "error", "ts": time.time(), "payload": res}))
+                    try:
+                        payload = obj.get("payload", {})
+                        base = int(payload.get("baseVersion", -1))
+                        ops = payload.get("ops")
+                        apply_now = bool(payload.get("applyNow", False))
+                        print(f"[ws] applyPatch base={base} ops={ops} apply_now={apply_now}")
+                        if not isinstance(ops, list):
+                            await ws.send(json.dumps({"type": "error", "ts": time.time(), "id": req_id, "payload": {"ok": False, "error": "invalid_ops"}}))
+                        else:
+                            with conductor._lock:
+                                if base != conductor.doc_version:
+                                    print(f"[ws] stale patch: client={base} server={conductor.doc_version}")
+                                    await ws.send(json.dumps({"type": "error", "ts": time.time(), "id": req_id, "payload": {"ok": False, "error": "stale", "expected": conductor.doc_version}}))
+                                else:
+                                    try:
+                                        patched = apply_json_patch(conductor.doc, ops)
+                                    except Exception as e:
+                                        print(f"[ws] patch_apply error: {e}")
+                                        await ws.send(json.dumps({"type": "error", "ts": time.time(), "id": req_id, "payload": {"ok": False, "error": "patch_apply", "details": str(e)}}))
+                                        patched = None
+                                    if isinstance(patched, dict):
+                                        structural = conductor._is_structural_ops(ops)
+                                        print(f"[ws] structural={structural}")
+                                        res = conductor._schedule_or_apply(conductor.doc_version, patched, structural=structural, apply_now=apply_now)
+                                        print(f"[ws] apply result: {res}")
+                                        if res.get("ok"):
+                                            print(f"[ws] patch applied ok; new docVersion={conductor.doc_version}")
+                                            await ws.send(json.dumps({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()}))
+                                            await ws.send(json.dumps({"type": "ack", "ts": time.time(), "id": req_id, "payload": res}))
+                                        else:
+                                            print(f"[ws] patch error response: {res}")
+                                            await ws.send(json.dumps({"type": "error", "ts": time.time(), "id": req_id, "payload": res}))
+                    except Exception as e:
+                        import traceback
+                        traceback.print_exc()
+                        try:
+                            await ws.send(json.dumps({"type": "error", "ts": time.time(), "id": req_id, "payload": {"ok": False, "error": "exception", "details": str(e)}}))
+                        except Exception:
+                            pass
                 # broadcast updated state after commands (except explicit getState which already responded)
                 if t != "getState":
                     await ws.send(json.dumps({"type": "state", "ts": time.time(), "payload": conductor.get_state()}))
@@ -442,7 +577,7 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
 
     async def main():
         async with websockets.serve(handler, host, port):
-            print(f"[ws] Conductor listening on ws://{host}:{port}")
+            print(f"[ws] Conductor listening on ws://{host}:{port}", flush=True)
             asyncio.create_task(metrics_task())
             await asyncio.Future()
 
@@ -454,9 +589,10 @@ def main():
     ap.add_argument("--loop", default="loop.json")
     ap.add_argument("--port", help="Substring to match MIDI port (e.g., 'OP-XY')")
     ap.add_argument("--bpm", type=float, default=120.0)
-    ap.add_argument("--clock-source", choices=["internal","external"], default="internal")
+    ap.add_argument("--clock-source", choices=["internal","external"], default="external")
     ap.add_argument("--ws-host", default="127.0.0.1")
     ap.add_argument("--ws-port", type=int, default=8765)
+    ap.add_argument("--http-port", type=int, default=8080)
     args = ap.parse_args()
 
     conductor = Conductor(args.loop, args.port, args.bpm, clock_source=args.clock_source)
@@ -472,8 +608,31 @@ def main():
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
+    # Serve static UI in-process on 127.0.0.1
+    def start_http_server():
+        import http.server, socketserver
+        from pathlib import Path
+        ui_dir = Path(__file__).resolve().parent.parent / 'ui'
+        class Handler(http.server.SimpleHTTPRequestHandler):
+            def __init__(self, *a, **kw):
+                super().__init__(*a, directory=str(ui_dir), **kw)
+        try:
+            httpd = socketserver.TCPServer(("127.0.0.1", args.http_port), Handler)
+        except OSError as e:
+            print(f"[http] could not bind 127.0.0.1:{args.http_port}: {e}; continuing without HTTP")
+            return
+        with httpd:
+            print(f"[http] serving UI on http://127.0.0.1:{args.http_port}")
+            try:
+                httpd.serve_forever()
+            except Exception:
+                pass
+    threading.Thread(target=start_http_server, daemon=True).start()
+
+    # Always force bind to localhost to avoid external exposure
+    host = "127.0.0.1"
     try:
-        asyncio.run(serve_ws(conductor, args.ws_host, args.ws_port))
+        asyncio.run(serve_ws(conductor, host, args.ws_port))
     except KeyboardInterrupt:
         shutdown()
 

@@ -15,11 +15,8 @@
       .track { border: 1px solid #ddd; border-radius: 6px; padding: 8px; }
       .track h3 { margin: 0 0 6px; font-size: 14px; display: flex; justify-content: space-between; }
       .grid { display: grid; gap: 2px; }
-      .cell { width: 16px; height: 16px; background: #eee; border-radius: 3px; }
+      .cell { width: 16px; height: 16px; background: #eee; border-radius: 3px; cursor: pointer; }
       .cell.on { background: #5aa7ff; }
-      .cell.v-hi { background: #0057ff; }
-      .cell.v-mid { background: #4d8dff; }
-      .cell.v-low { background: #a7c7ff; }
       .dk { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; background: #fafafa; padding: 6px; border-radius: 4px; border: 1px dashed #ddd; white-space: pre; overflow-x: auto; }
       .pill { font-size: 11px; padding: 2px 6px; border-radius: 999px; background: #f2f2f2; margin-left: 6px; }
     </style>
@@ -27,38 +24,121 @@
   <body>
     <h1>OP‑XY Conductor – Local UI</h1>
     <div class="row">
-      <button id="btnPlay">Play</button>
-      <button id="btnStop">Stop</button>
-      <button id="btnCont">Continue</button>
-      <label>BPM <input id="bpm" type="number" value="100" min="20" max="300" /></label>
-      <button id="btnPushTempo">Push tempo</button>
+      <label>BPM <input id="bpm" type="number" value="100" min="40" max="220" /></label>
+      <button id="btnSetTempo">Set tempo (CC80)</button>
+      <button id="btnReconnect">Reconnect</button>
       <span id="status"></span>
+      <span id="conn" class="pill">connecting…</span>
+      <span id="patch" class="pill"></span>
+      <span id="pending" class="pill"></span>
+    </div>
+
+    <div class="row">
+      <label><input id="applyNow" type="checkbox" /> apply now (structural)</label>
+      <span style="font-size:12px;color:#666">edits send as patches; structural applies next bar unless checked</span>
     </div>
 
     <div id="meta"></div>
+    <div id="metrics" class="dk"></div>
     <div class="tracks" id="tracks"></div>
 
     <script>
-      const wsUrl = 'ws://127.0.0.1:8765';
-      let ws; let lastDoc = null; let lastState = null;
+      const wsBaseUrl = 'ws://127.0.0.1:8765';
+      let ws; let lastDoc = null; let lastState = null; let lastMetrics = null; let reqId = 1; const pending = new Map(); let retryMs = 500; let pingTimer = null; let lastPingAt = 0; let lastDocVersion = 0; let lastSha = '';
+      // Patch queue to serialize edits and avoid stale baseVersion
+      const patchQueue = [];
+      let inFlightPatch = null; // { id, ops, applyNow }
       const status = document.getElementById('status');
       function setStatus(s) { status.textContent = s; }
 
       function connect() {
-        ws = new WebSocket(wsUrl);
-        ws.onopen = () => setStatus('WS connected');
-        ws.onclose = () => setStatus('WS disconnected');
+        try { if (ws && (ws.readyState === 0 || ws.readyState === 1)) return; } catch(e){}
+        ws = new WebSocket(wsBaseUrl);
+        ws.onopen = () => {
+          setStatus('WS connected'); retryMs = 500;
+          try { send({type:'subscribe'}); send({type:'getDoc'}); send({type:'getState'}); } catch(e){}
+          if (pingTimer) { clearInterval(pingTimer); }
+          pingTimer = setInterval(() => { try { if (ws && ws.readyState === 1) { lastPingAt = performance.now(); send({type:'ping'}); } } catch(e){} }, 10000);
+        };
+        ws.onclose = () => {
+          setStatus('WS disconnected'); if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+          setTimeout(connect, retryMs); retryMs = Math.min(retryMs * 2, 4000);
+        };
         ws.onmessage = (ev) => {
           try { const msg = JSON.parse(ev.data); handle(msg); } catch {}
         };
-        // Fallback poll: request state every 1s in case server isn't pushing
-        setInterval(() => { try { ws && ws.readyState === 1 && ws.send(JSON.stringify({type:'getState'})); } catch(e){} }, 1000);
       }
 
-      function handle(msg) {
-        if (msg.type === 'doc') { lastDoc = msg.payload; renderDoc(); }
+  function handle(msg) {
+        if (msg.type === 'doc') { const payload = msg.payload; const sha = payload && payload.sha256 || ''; if (sha && sha===lastSha) { /* no redraw */ } else { lastSha = sha||lastSha; lastDoc = payload; lastDocVersion = parseInt(lastDoc.docVersion||0,10)||0; try { console.log('doc v', lastDocVersion, 'sha', sha.slice(0,8)); } catch(e){}; renderDoc(); } try { flushPatchQueue(); } catch(e){} }
         if (msg.type === 'state') { lastState = msg.payload; renderState(); }
-        if (msg.type === 'metrics') { /* could render later */ }
+        if (msg.type === 'metrics') { lastMetrics = msg.payload; renderMetrics(); }
+        if (msg.type === 'error') {
+          console.warn('ws error', msg.payload);
+          const code = msg.payload && msg.payload.error;
+          setStatus('WS error: ' + (code || 'unknown'));
+          if (code === 'stale') { try { inFlightPatch = null; send({type:'getDoc'}); flushPatchQueue(); } catch(e){} }
+        }
+        if (msg.type === 'ack') { const id = msg.id; if (id && pending.has(id)) pending.delete(id); if (inFlightPatch && inFlightPatch.id === id) { inFlightPatch = null; } try { document.getElementById('patch').textContent='ok'; setTimeout(()=>{ const el=document.getElementById('patch'); if (el && el.textContent==='ok') el.textContent=''; }, 1200);} catch(e){} try { flushPatchQueue(); } catch(e){} }
+        if (msg.type === 'hello') { /* protocol ok */ }
+        if (msg.type === 'pong') { if (lastPingAt) { const rtt = Math.round(performance.now()-lastPingAt); try { document.getElementById('conn').textContent = `connected (${rtt}ms)`; } catch(e){} } }
+  }
+
+  // Minimal optimistic patch applier for common UI ops
+  function optimisticApplyPatch(ops){
+    if (!lastDoc || !lastDoc.json) return;
+    const root = lastDoc.json;
+    for (const op of ops){
+      const p = op.path || '';
+      const parts = p.split('/').filter(Boolean);
+      if (parts[0] === 'tracks' && parts[2] === 'pattern' && parts[3] === 'steps'){
+        const ti = parseInt(parts[1],10);
+        const track = (root.tracks||[])[ti]; if (!track) continue;
+        const steps = track.pattern && Array.isArray(track.pattern.steps) ? track.pattern.steps : (track.pattern.steps = []);
+        if (op.op === 'add' && parts[4] === '-'){
+          steps.push(JSON.parse(JSON.stringify(op.value)));
+        } else if (op.op === 'remove' && parts.length === 5){
+          const si = parseInt(parts[4],10);
+          if (!Number.isNaN(si) && si >= 0 && si < steps.length) steps.splice(si,1);
+        }
+      } else if (parts[0] === 'tracks' && parts[2] === 'drumKit' && parts[3] === 'patterns' && parts.length === 6 && parts[5] === 'pattern'){
+        const ti = parseInt(parts[1],10); const pi = parseInt(parts[4],10);
+        const track = (root.tracks||[])[ti]; if (!track) continue;
+        const patterns = track.drumKit && Array.isArray(track.drumKit.patterns) ? track.drumKit.patterns : null;
+        if (patterns && !Number.isNaN(pi) && patterns[pi]) patterns[pi].pattern = String(op.value||'');
+      }
+    }
+  }
+
+      function send(obj) { if (!ws || ws.readyState !== 1) return; const id = reqId++; obj.id = id; if (obj.type && obj.type.startsWith('apply')) pending.set(id, obj); ws.send(JSON.stringify(obj)); return id; }
+
+      function flushPatchQueue(){
+        if (!ws || ws.readyState !== 1 || !lastDoc) return;
+        if (inFlightPatch) return;
+        if (patchQueue.length === 0) return;
+        const next = patchQueue.shift();
+        const baseVersion = parseInt(lastDoc.docVersion||0, 10) || 0;
+        const m = { type:'applyPatch', payload: { baseVersion, ops: next.ops, applyNow: !!next.applyNow } };
+        try { console.log('sendPatch', m); } catch(e){}
+        const id = send(m);
+        if (id) inFlightPatch = { id, ...next };
+      }
+
+      function sendPatch(ops, applyNow) {
+        patchQueue.push({ ops, applyNow: !!applyNow });
+        try { console.log('enqueuePatch', { queued: patchQueue.length, inFlight: !!inFlightPatch, ops }); } catch(e){}
+        flushPatchQueue();
+      }
+
+      function renderMetrics() {
+        const el = document.getElementById('metrics');
+        if (!lastMetrics) { el.textContent = ''; return; }
+        const eng = lastMetrics.engine || {}; const clk = lastMetrics.clock || {};
+        const parts = [];
+        parts.push(`engine: note_on=${eng.note_on||0} note_off=${eng.note_off||0} cc=${eng.cc||0} shed_cc=${eng.shed_cc||0}`);
+        if (clk.p95_ms != null || clk.p99_ms != null) parts.push(`clock: p95=${clk.p95_ms||'?'}ms p99=${clk.p99_ms||'?'}ms`);
+        if (clk.externalBpm != null) parts.push(`extBpm=${(Math.round(clk.externalBpm*10)/10).toFixed(1)}`);
+        el.textContent = parts.join('  |  ');
       }
 
       function renderState() {
@@ -82,7 +162,8 @@
         const meta = lastDoc.json.meta || {}; const spb = meta.stepsPerBar || 16; const ppq = meta.ppq || 96;
         document.getElementById('bpm').value = (lastState && lastState.bpm) || (meta.tempo || 120);
         const metaDiv = document.getElementById('meta');
-        metaDiv.textContent = `docVersion=${lastDoc.docVersion} sha=${lastDoc.sha256?.slice(0,8)}`;
+        const p = lastDoc.path || 'loop.json';
+        metaDiv.textContent = `loop=${p} docVersion=${lastDoc.docVersion} sha=${lastDoc.sha256?.slice(0,8)}`;
 
         const tracks = (lastDoc.json.tracks || []);
         tracks.forEach((tr, ti) => {
@@ -92,30 +173,53 @@
           const right = document.createElement('span'); right.className = 'pill'; right.textContent = tr.type || 'sampler';
           h3.appendChild(left); h3.appendChild(right); div.appendChild(h3);
 
-          // Steps grid (pattern.steps) — render only if steps exist and this is not a drumKit-only track
+          // Steps grid (pattern.steps) — always render a grid to allow adding notes
           const pat = tr.pattern || {}; const steps = Array.isArray(pat.steps) ? pat.steps : []; const bars = Math.max(1, pat.lengthBars || 1);
-          if (steps.length > 0 && !(tr.drumKit && Array.isArray(tr.drumKit.patterns))) {
+          if (true) {
             const total = bars * spb;
             const vals = Array(total).fill(0);
-            steps.forEach(st => {
-              const idx = st && typeof st.idx === 'number' ? st.idx|0 : -1; const events = (st && st.events) || [];
+            const stepIndexByAbs = new Map();
+            let defaultPitch = null;
+            steps.forEach((st, sIdx) => {
+              const idx = st && typeof st.idx === 'number' ? (st.idx|0) : -1; const events = (st && st.events) || [];
               if (idx >= 0 && events.length) {
-                const v = Math.max(1, Math.min(127, events[0].velocity || 100));
-                vals[(idx % total)] = v;
+                vals[(idx % total)] = 1;
+                stepIndexByAbs.set((idx % total), { arrIndex: sIdx, step: st });
+                if (defaultPitch == null && typeof events[0].pitch === 'number') defaultPitch = events[0].pitch|0;
               }
             });
-            // Only draw if at least one step is active
-            if (vals.some(x => x > 0)) {
-              const grid = document.createElement('div'); grid.className = 'grid';
-              grid.style.gridTemplateColumns = `repeat(${total}, 16px)`;
-              for (let i=0;i<total;i++) {
-                const c = document.createElement('div'); c.className = 'cell';
-                const v = vals[i]; if (v>0){ c.classList.add('on'); if (v>=105) c.classList.add('v-hi'); else if (v>=70) c.classList.add('v-mid'); else c.classList.add('v-low'); }
-                if (i % spb === 0) { c.style.outline = '1px solid #ddd'; }
-                grid.appendChild(c);
-              }
-              div.appendChild(grid);
+            if (defaultPitch == null) defaultPitch = 60; // C4 fallback
+            // Always draw grid so user can add notes on empty patterns
+            const grid = document.createElement('div'); grid.className = 'grid';
+            grid.style.gridTemplateColumns = `repeat(${total}, 16px)`;
+            for (let i=0;i<total;i++) {
+              const c = document.createElement('div'); c.className = 'cell';
+              const v = vals[i]; if (v>0){ c.classList.add('on'); }
+              if (i % spb === 0) { c.style.outline = '1px solid #ddd'; }
+              // Click: toggle note on/off at this step (no velocity UI)
+              c.addEventListener('click', (ev) => {
+                  const info = stepIndexByAbs.get(i);
+                  if (info) {
+                    // Existing: remove the whole step entry
+                    const si = info.arrIndex;
+                    const ops = [{ op: 'remove', path: `/tracks/${ti}/pattern/steps/${si}` }];
+                    const applyNow = document.getElementById('applyNow').checked;
+                    // Optimistic UI: apply locally then send
+                    try { optimisticApplyPatch([ { op:'remove', path:`/tracks/${ti}/pattern/steps/${si}` } ]); renderDoc(); } catch(e){}
+                    sendPatch(ops, applyNow);
+                  } else {
+                    // Empty: add a new step (default velocity handled backend; UI uses 100)
+                    const newStep = { idx: i, events: [{ pitch: defaultPitch, velocity: 100, lengthSteps: 1 }] };
+                    const ops = [{ op: 'add', path: `/tracks/${ti}/pattern/steps/-`, value: newStep }];
+                    const applyNow = document.getElementById('applyNow').checked;
+                    try { optimisticApplyPatch([{ op:'add', path:`/tracks/${ti}/pattern/steps/-`, value:newStep }]); renderDoc(); } catch(e){}
+                    sendPatch(ops, applyNow);
+                  }
+              });
+              // No shift+click behavior for now (keep UI simple)
+              grid.appendChild(c);
             }
+            div.appendChild(grid);
           }
 
           // DrumKit patterns, if any – render as 16-step grid by hit type (rows)
@@ -135,14 +239,14 @@
               { id:'cowbell', label:'cow' }, { id:'conga_low', label:'cl' }, { id:'conga_high', label:'ch' },
               { id:'guiro', label:'guiro' }, { id:'metal', label:'metal' }, { id:'chi', label:'chi' },
             ];
-            // Build map key->pattern string for current bar = 1
+            // Build map key-> {pattern, specIndex} for current bar = 1
             const byKey = new Map();
             for (const s of specs) {
               const key = alias(normalize(s.key||''));
               const bar = s.bar||1;
               if (!s.pattern || typeof s.pattern !== 'string') continue;
               if (bar !== 1) continue; // first pass: show bar 1
-              byKey.set(key, String(s.pattern));
+              byKey.set(key, { pattern: String(s.pattern), specIndex: specs.indexOf(s) });
             }
             // Append any unknown keys as extra rows
             for (const s of specs) {
@@ -154,16 +258,29 @@
             cont.style.marginTop = '8px';
             // Render rows
             rows.forEach(r => {
-              const patt = byKey.get(r.id);
-              if (!patt) return; // skip empty rows
+              const ent = byKey.get(r.id);
+              if (!ent) return; // skip empty rows
+              const patt = ent.pattern; const specIndex = ent.specIndex;
               const row = document.createElement('div'); row.style.display='flex'; row.style.alignItems='center'; row.style.gap='8px'; row.style.margin='2px 0';
               const lab = document.createElement('div'); lab.textContent = r.label; lab.style.width='64px'; lab.style.textAlign='right'; lab.style.fontSize='12px'; lab.style.color='#555';
               row.appendChild(lab);
               const g = document.createElement('div'); g.className='grid'; g.style.gridTemplateColumns = `repeat(${spb}, 16px)`;
               for (let i=0;i<spb;i++){
                 const c = document.createElement('div'); c.className='cell';
-                if (i < patt.length && patt[i] === 'x') c.classList.add('on','v-mid');
+                if (i < patt.length && patt[i] === 'x') c.classList.add('on');
                 if (i % spb === 0) c.style.outline='1px solid #ddd';
+                // Click to toggle drum hit in pattern string
+                c.addEventListener('click', () => {
+                  const chars = patt.split('');
+                  if (i < chars.length) {
+                    chars[i] = (chars[i] === 'x') ? '.' : 'x';
+                  }
+                  const next = chars.join('');
+                  const ops = [{ op: 'replace', path: `/tracks/${ti}/drumKit/patterns/${specIndex}/pattern`, value: next }];
+                  const applyNow = document.getElementById('applyNow').checked; // structural; default next bar
+                  try { optimisticApplyPatch([{ op:'replace', path:`/tracks/${ti}/drumKit/patterns/${specIndex}/pattern`, value: next }]); renderDoc(); } catch(e){}
+                  sendPatch(ops, applyNow);
+                });
                 g.appendChild(c);
               }
               row.appendChild(g); cont.appendChild(row);
@@ -176,17 +293,22 @@
       }
 
       // Controls
-      document.getElementById('btnPlay').onclick = () => ws && ws.send(JSON.stringify({type:'play'}));
-      document.getElementById('btnStop').onclick = () => ws && ws.send(JSON.stringify({type:'stop'}));
-      document.getElementById('btnCont').onclick = () => ws && ws.send(JSON.stringify({type:'continue'}));
+      // Transport is device-controlled; UI does not send play/stop
+      document.getElementById('btnReconnect').onclick = () => { try { ws && ws.close(); } catch(e){}; connect(); };
       // Simplified: Push tempo sends CC80 mapping; device remains master
-      document.getElementById('btnPushTempo').onclick = () => {
+      document.getElementById('btnSetTempo').onclick = () => {
         if (!ws || ws.readyState !== 1) return;
         const bpmField = document.getElementById('bpm');
         const bpm = parseFloat(bpmField.value||'120');
         if (!isFinite(bpm) || bpm <= 0) return;
+        // Always send CC80 to device for tempo nudge; device remains master
         ws.send(JSON.stringify({type:'setTempoCC', bpm}));
+        try { bpmField.blur(); } catch(e){}
+        // Optimistically reflect value for continuity
+        try { bpmField.value = (Math.round(bpm * 10) / 10).toFixed(1); } catch(e){}
       };
+
+      // No explicit velocity controls in UI; backend keeps velocity semantics
 
       connect();
     </script>

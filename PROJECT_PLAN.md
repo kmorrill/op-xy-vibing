@@ -19,15 +19,16 @@
 
 ## B. Architecture Diagram (ASCII)
 ```
-Human ⇄ LLM (Codex)
-          │            
-          ▼            
-      Conductor ⇄ Playback Engine ⇄ OP‑XY (USB‑C MIDI)
-          ▲            
-Human ⇄ Web UI ┘        
+Human ⇄ LLM (Agent)
+          │
+          ▼
+   Conductor (single origin)
+     ├── HTTP UI (static)
+     ├── WS (doc/state/metrics)
+     ├── File watcher (atomic write/watch)
+     ├── Git (batched commits)
+     └── Playback Engine ⇄ OP‑XY (USB‑C MIDI)
 
-Conductor ⇄ Git (batched commits)
-Conductor ⇄ loop.json (atomic write/watch)
 Spec: docs/opxyloop-1.0.md (normative)
 ```
 
@@ -35,8 +36,8 @@ Spec: docs/opxyloop-1.0.md (normative)
 - Functional:
   - Real‑time scheduling with no look‑ahead; events fire on current tick.
   - External MIDI clock/transport (OP‑XY) is authoritative by default.
-  - Internal tempo override on request; transmit MIDI Clock so OP‑XY follows.
-  - Bi‑directional transport: play/stop/continue; optional SPP reposition (no seek UI/API).
+  - Internal tempo override on request; transmit MIDI Clock only when explicitly in internal clock mode.
+  - Transport: external device controls Start/Stop/Continue; optional SPP reposition (no seek UI/API). UI/server never send transport.
   - JSON ownership: `loop.json` on disk is canonical; JSON Patch (RFC 6902) or full replace.
   - Single drum track (GM‑safe fallback); velocity semantics: Accent ≥105, normal 70–100, ghost 30–55; max ratchet density 8/step.
   - CC & LFO: base + bipolar offset, clamp 0–127; phase reset on Play and bar boundary; no catch‑up on seek.
@@ -48,7 +49,7 @@ Spec: docs/opxyloop-1.0.md (normative)
   - Safety/panic: rigorous active‑notes accounting; All Notes Off on panic.
   - Atomicity/durability: temp+rename writes; Git batched commits (3–5s) and manual “Checkpoint”.
   - Testability: virtual MIDI, synthetic clock (internal/external), expectation DSL.
-  - Observability: broadcast metrics (msgPerSec, jitterMsP95/p99, dropped, clockSrc); hash of canonical JSON.
+  - Observability: broadcast metrics (msgPerSec, jitterMsP95/p99, dropped, clockSrc); hash of canonical JSON; health endpoint; WS hello/ack/ping.
 
 ## D. Playback Engine Strategy (no look‑ahead)
 - Algorithm (tick loop):
@@ -138,9 +139,14 @@ project/
   - Deliverables: metrics broadcast (msgPerSec, jitter p95/p99, dropped, clockSrc, activeNotes, hash); structured event logs.
   - DoD tests: harness consumes metrics and asserts thresholds; logs include note_id with schedule vs emit delta.
 
-## G. Test Harness Spec
+## G. Test Harness & Integration Tests
 - Virtual MIDI destination to capture all MIDI; timestamp events.
 - Synthetic clock drivers: internal and simulated external (24 PPQN + Start/Stop/Continue + optional SPP).
+- Python WebSocket client helper to subscribe, patch, and assert:
+  - hello + doc on connect
+  - ack/error with ids
+  - doc/state rebroadcast on effective change (including next‑bar applies)
+  - no spurious redraws when hash unchanged
 - DSL examples:
 ```
 @bpm 120
@@ -153,7 +159,7 @@ expect off ch1 60 within 5ms of 0.500s  # note-off not lost
 after stop expect no on|cc for 200ms; allNotesOff observed
 ```
 - Timing tolerances: use windows (p95/p99) not absolutes; define flakiness budget; CI parallelism with isolated virtual MIDI ports per worker.
- - Determinism aids: use monotonic fake time in unit tests; reserve real‑time tolerance tests for integration layer.
+ - Determinism aids: use monotonic fake time in unit tests; reserve real‑time tolerance tests for integration layer; WS tests stable with timeouts and retries.
  - Coverage focus: note‑off during live edits, structural apply next bar, CC+LFO merge clamp, panic after stop/hot‑swap/disconnect.
 
 ## H. Risks & Mitigations

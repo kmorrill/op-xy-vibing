@@ -52,7 +52,18 @@ class MidoSink(CoreSink):
 
 
 def open_mido_output(name_filter: Optional[str] = None):
-    import mido
+    """Open a Mido output port.
+
+    In environments without mido/rtmidi installed, returns a dummy output
+    with a `.send()` no-op so higher layers can still run (e.g., WS-only).
+    """
+    try:
+        import mido
+    except Exception:
+        class _DummyOut:
+            def send(self, *_args, **_kwargs):
+                pass
+        return _DummyOut()
 
     if name_filter:
         for name in mido.get_output_names():
@@ -62,12 +73,23 @@ def open_mido_output(name_filter: Optional[str] = None):
     # Default: open the first available
     names = mido.get_output_names()
     if not names:
-        raise RuntimeError("No MIDI output ports available")
+        # Provide dummy when no ports exist
+        class _DummyOut:
+            def send(self, *_args, **_kwargs):
+                pass
+        return _DummyOut()
     return mido.open_output(names[0])
 
 
 def open_mido_input(name_filter: Optional[str] = None, callback=None):
-    import mido
+    """Open a Mido input port or return a dummy listener when unavailable."""
+    try:
+        import mido
+    except Exception:
+        class _DummyIn:
+            def close(self):
+                pass
+        return _DummyIn()
 
     if name_filter:
         for name in mido.get_input_names():
@@ -77,5 +99,8 @@ def open_mido_input(name_filter: Optional[str] = None, callback=None):
     # Default: open the first available
     names = mido.get_input_names()
     if not names:
-        raise RuntimeError("No MIDI input ports available")
+        class _DummyIn:
+            def close(self):
+                pass
+        return _DummyIn()
     return mido.open_input(names[0], callback=callback)

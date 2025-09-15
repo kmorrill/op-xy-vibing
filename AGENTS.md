@@ -18,7 +18,7 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 - No look‑ahead: schedule in true real time on current tick only.
 - Note‑off guarantee: every Note On emits a matching Note Off, even during live edits/hot‑swap. Maintain active‑notes registry; emit All Notes Off on stop/hot‑swap/disconnect.
 - Clock: external OP‑XY MIDI clock/transport authoritative by default; internal tempo override on explicit user request (then transmit MIDI Clock out).
-- Transport: bi‑directional play/stop/continue. SPP may reposition runtime, but no seek UI/API in MVP and no CC catch‑up on seek.
+- Transport: external device controls Start/Stop/Continue; Conductor/UI never send transport. SPP may reposition runtime; no seek UI/API in MVP and no CC catch‑up on seek.
 - Safety: rate guards (~2.5k msgs/s global, ~800/track); shed lowest‑audibility CC bursts first.
 
 ---
@@ -35,7 +35,13 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 | APIs & Protocols | WebSocket envelopes `{type, ts, payload}`; RFC 6902 JSON Patch. |
 | Failures & Recovery | Patch rejected (stale): fetch latest, rebase, retry. Validation error: request fix‑it hints from Validator. |
 | Observability & KPIs | Patch acceptance rate, docVersion drift, edit latency to “effective at tick/bar”. |
-| Runbook | Connect to Conductor WS; subscribe to `doc` and `state`; send patches with correct `baseVersion`. |
+| Runbook | Connect to Conductor WS; subscribe to `doc` and `state`; send patches with correct `baseVersion`. The user is responsible for starting/restarting servers; however, the coding agent will first attempt to start a local server and validate with curl. If that is not possible (sandbox/permissions), the agent will print an explicit one‑liner for the user to run, then re‑validate with curl/WS after you confirm. |
+
+### Operator Interaction Policy
+
+-- Servers are user‑started. The agent will first try to start locally; if not permitted, it will print a single, copy‑pasteable command for you to run (including `.venv/bin/python` and all flags) and will wait for confirmation.
+-- After any start/restart, the agent validates health with curl (HTTP) and an optional WebSocket snippet to ensure the right process is serving.
+-- Prefer single commands that both stop prior instances and start a fresh one.
 
 ## Conductor (watcher + patch gate + broadcaster + metrics)
 
@@ -43,7 +49,7 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 |---|---|
 | Purpose & Success | Canonical doc manager; gatekeeper for edits; broadcaster of state/doc/metrics; ensures atomicity and history. |
 | Responsibilities | Watch file; validate; apply patches/full replace; atomic write/rename; broadcast; commit batched history; clock/transport state; metrics. |
-| Inputs | FS events on `loop.json`; WS inbound: `play/stop/continue/setTempo/applyPatch/replaceJSON`. |
+| Inputs | FS events on `loop.json`; WS inbound: `setTempo`/`setTempoCC`/`applyPatch`/`replaceJSON`. |
 | Outputs | WS outbound: `state`, `doc`, `metrics`, `error`; MIDI transport if internal clock. |
 | Invariants | Monotonic `docVersion`; no partial writes; next‑bar apply for structural edits. |
 | APIs & Protocols | WebSocket JSON; RFC 6902; Git CLI; file I/O with temp+rename. |
@@ -60,7 +66,7 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 | Inputs | Clock ticks (internal or external 24 PPQN); current doc snapshot; transport commands. |
 | Outputs | MIDI Note/CC/Clock; All Notes Off on panic/stop. |
 | Invariants | Note‑offs never orphaned; CC clamp 0–127; LFO phase reset on Play/bar by default. |
-| APIs & Protocols | CoreMIDI (macOS) or RtMidi; MIDI Clock (24 PPQN), Start/Stop/Continue; optional SPP reposition. |
+| APIs & Protocols | CoreMIDI (macOS) or RtMidi; listens to external MIDI Clock (24 PPQN) and Start/Stop/Continue; optional SPP reposition. Never sends transport or MIDI Clock. |
 | Failures & Recovery | Missed Note Off detection: periodic reconciliation; device disconnect: panic and pause; overload: shed CCs first. |
 | Observability & KPIs | Tick jitter p95/p99, on/off ordering correctness, active‑notes count, shed counts. |
 | Runbook | Connect OP‑XY via USB‑C; select MIDI ports; verify clock source; test panic; verify drum map. |
@@ -72,7 +78,7 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 | Purpose & Success | DAW‑style grid editor that edits the same JSON losslessly; immediate feedback with transport controls. |
 | Responsibilities | Render doc; edit steps/velocities/CC points; send patches; show transport/clock; optional presence; no seek UI. |
 | Inputs | `doc`, `state`, `metrics`. |
-| Outputs | `applyPatch` / `replaceJSON`; optional `setTempo`; `play/stop/continue`. |
+| Outputs | `applyPatch` / `replaceJSON`; optional `setTempo` (CC80). No transport commands. |
 | Invariants | Lossless round‑trip of JSON; structural edits default next bar. |
 | APIs & Protocols | WebSocket to Conductor; canonical JSON formatting; SHA‑256 footer hash optional for integrity. |
 | Failures & Recovery | Stale patch rejection: rebase UI buffer; WS drop: reconnect and resync; invalid edit: highlight and show Validator hints. |
@@ -127,12 +133,12 @@ Policy:
 
 | Area | Details |
 |---|---|
-| Purpose & Success | Deterministically verify timing/order/invariants with virtual MIDI and synthetic clocks. |
-| Responsibilities | Provide virtual MIDI destination; drive internal/external clock; capture events with timestamps; DSL assertions; metrics capture. |
+| Purpose & Success | Deterministically verify timing/order/invariants with virtual MIDI and synthetic clocks; plus integration tests that exercise HTTP + WebSocket protocol end‑to‑end. |
+| Responsibilities | Provide virtual MIDI destination; drive internal/external clock; capture events with timestamps; DSL assertions; metrics capture; Python WS client that subscribes, patches, and asserts server broadcasts and timing semantics. |
 | Inputs | Test scenarios; expected DSL; current code. |
 | Outputs | Pass/fail with timing windows (tolerances, not absolutes); metrics. |
 | Invariants | Note‑off never orphaned; no events after stop; CC/LFO rates within caps. |
-| APIs & Protocols | Python test runner; virtual MIDI backend; DSL parser. |
+| APIs & Protocols | Python test runner; virtual MIDI backend; DSL parser; Python websockets client helper. |
 | Failures & Recovery | Flaky timing: widen tolerances within budget; parallelize with isolation. |
 | Observability & KPIs | Jitter distributions, dropped counts, event throughput. |
 | Runbook | Run tests with virtual MIDI; simulate external clock; assert expectations. |
@@ -158,7 +164,7 @@ Policy:
 - Tip: Ensure OP‑XY Track 1 uses a velocity‑sensitive patch; otherwise loud/quiet may sound identical even though MIDI is correct.
 
 ## WebSocket Types (first cut)
-- Inbound: `play`, `stop`, `continue`, `setTempo{bpm}`, `applyPatch{baseVersion,ops[]}`, `replaceJSON{baseVersion,doc}`.
+- Inbound: `setTempo{bpm}`, `setTempoCC{bpm}`, `applyPatch{baseVersion,ops[]}`, `replaceJSON{baseVersion,doc}`.
 - Outbound: `state{transport,clockSource,bpm,barBeatTick}`, `doc{docVersion,json}`, `error{code,message,details}`, `metrics{msgPerSec,jitterMsP95,dropped,clockSrc}`.
 
 ## Schema Integration Tasks & Canonicalization
@@ -273,3 +279,24 @@ Policy:
   - BPM field: auto-updates from device (not while focused).
   - Push tempo: sends CC80 (device remains master).
   - Play/Stop/Continue: transport only; no tempo pulses are pushed when external.
+### Server Restart Command (single line)
+
+- Conductor unified UI+WS (external clock, OP‑XY):
+  - `pkill -f "conductor.conductor_server" || true; .venv/bin/python -m conductor.conductor_server --loop conductor/tests/fixtures/loop-vel-ch0.json --port 'OP-XY' --clock-source external --ws-port 8765 --http-port 8080`
+
+- Minimal prototype (HTTP polling; edits test.json):
+  - `pkill -f "prototype.server" || true; .venv/bin/python -m prototype.server --file test.json --http-port 8080`
+
+Run the appropriate command in a new terminal window. The agent will proceed once you confirm the server is running.
+### Verification Pattern (agent runs these automatically when possible)
+
+- HTTP health/doc (prototype):
+  - `curl -s http://127.0.0.1:8080/api/doc`
+- HTTP health/doc (Conductor example):
+  - `curl -s http://127.0.0.1:8080` (expects HTML) and connect WS as below.
+- WebSocket quick test (Python one‑liner, no files):
+  - `.venv/bin/python -c "import asyncio,websockets,json; async def m():\n    async with websockets.connect('ws://127.0.0.1:8765') as ws:\n      await ws.send(json.dumps({'type':'subscribe'}));\n      print(await ws.recv()); print(await ws.recv())\n  ; asyncio.run(m())"`
+  - This should print a hello/doc pair. For Conductor, replace the subscribe payload as needed.
+- Alternative (if you use wscat):
+  - `npx wscat -c ws://127.0.0.1:8765`
+  - Then send: `{"type":"subscribe"}` and observe doc/state/metrics frames.
