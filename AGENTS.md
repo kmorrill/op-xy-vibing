@@ -37,6 +37,8 @@ Reference: `docs/opxyloop-1.0.md` is normative for the loop JSON.
 | Observability & KPIs | Patch acceptance rate, docVersion drift, edit latency to “effective at tick/bar”. |
 | Runbook | Connect to Conductor WS; subscribe to `doc` and `state`; send patches with correct `baseVersion`. The user is responsible for starting/restarting servers; however, the coding agent will first attempt to start a local server and validate with curl. If that is not possible (sandbox/permissions), the agent will print an explicit one‑liner for the user to run, then re‑validate with curl/WS after you confirm. |
 
+Reference: For sound‑design choices and parameter intent across engines, use `docs/opxy-synth-engines.md` to guide suggested CC/parameter edits.
+
 ### Operator Interaction Policy
 
 -- Servers are user‑started. The agent will first try to start locally; if not permitted, it will print a single, copy‑pasteable command for you to run (including `.venv/bin/python` and all flags) and will wait for confirmation.
@@ -184,6 +186,7 @@ Policy:
 - Define canonical formatting (ordering, whitespace) and hashing policy.
 - Implement validator and canonicalizer; add fixtures under `conductor/tests/fixtures/*.json`.
 - Document velocity semantics: Accent ≥105, normal 70–100, ghost 30–55. Guardrail: max ratchet density = 8/step.
+- Sound‑design helper: See `docs/opxy-synth-engines.md` for per‑engine P1–P4 behavior; reference it when proposing synth parameter/CC edits to achieve requested timbres.
 
 ## Milestone Handoff & Progress Pointers
 - Update this file while working through milestones in `PROJECT_PLAN.md` to leave precise pickup instructions for the next agent.

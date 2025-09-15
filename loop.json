@@ -1,110 +1,1308 @@
 {
   "version": "opxyloop-1.0",
   "meta": {
-    "tempo": 100,
+    "tempo": 125,
     "ppq": 96,
     "stepsPerBar": 16,
     "key": "C",
-    "mode": "major"
+    "mode": "minor"
   },
   "deviceProfile": {
     "portName": "OP-XY",
     "drumMap": {
       "kick": 53,
-      "kick_alt": 54,
       "snare": 55,
-      "snare_alt": 56,
-      "rim": 57,
       "clap": 58,
-      "tambourine": 59,
-      "shaker": 60,
       "closed_hat": 61,
       "open_hat": 62,
-      "pedal_hat": 63,
       "low_tom": 65,
       "crash": 66,
       "mid_tom": 67,
       "ride": 68,
       "high_tom": 69,
-      "conga_low": 71,
-      "conga_high": 72,
-      "cowbell": 73,
-      "guiro": 74,
-      "metal": 75,
-      "chi": 76
+      "shaker": 60
     }
   },
   "tracks": [
     {
-      "id": "t-epiano",
-      "name": "E-Piano",
-      "type": "synth",
-      "role": "keys",
-      "midiChannel": 3,
+      "id": "t-drums-house",
+      "name": "House Drums (chorus)",
+      "type": "sampler",
+      "midiChannel": 0,
+      "role": "drums",
+      "drumKit": {
+        "patterns": [
+          {
+            "bar": 1,
+            "key": "kick",
+            "pattern": "x...x...x...x...",
+            "vel": 122,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 1,
+            "key": "clap",
+            "pattern": "....x.......x...",
+            "vel": 118,
+            "lengthSteps": 1,
+            "repeatBars": 7
+          },
+          {
+            "bar": 1,
+            "key": "snare",
+            "pattern": "....x.......x...",
+            "vel": 96,
+            "lengthSteps": 1,
+            "repeatBars": 7
+          },
+          {
+            "bar": 5,
+            "key": "crash",
+            "pattern": "x...............",
+            "vel": 120,
+            "lengthSteps": 4
+          },
+          {
+            "bar": 8,
+            "key": "snare",
+            "pattern": "............xxxx",
+            "vel": 110,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 8,
+            "key": "low_tom",
+            "pattern": "............x...",
+            "vel": 108,
+            "lengthSteps": 2
+          },
+          {
+            "bar": 8,
+            "key": "mid_tom",
+            "pattern": ".............x..",
+            "vel": 108,
+            "lengthSteps": 2
+          },
+          {
+            "bar": 8,
+            "key": "high_tom",
+            "pattern": "..............x.",
+            "vel": 108,
+            "lengthSteps": 2
+          },
+          {
+            "bar": 8,
+            "key": "ride",
+            "pattern": ".x.x.x.x.x.x.x.x",
+            "vel": 88,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 1,
+            "key": "closed_hat",
+            "pattern": "..x...x...x...x.",
+            "vel": 70,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 3,
+            "key": "closed_hat",
+            "pattern": "..x...x...x...x.",
+            "vel": 70,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 5,
+            "key": "closed_hat",
+            "pattern": "..x...x...x...x.",
+            "vel": 70,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 7,
+            "key": "closed_hat",
+            "pattern": "..x...x...x...x.",
+            "vel": 70,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 2,
+            "key": "closed_hat",
+            "pattern": ".x.x.x.x.x.x.x.x",
+            "vel": 74,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 4,
+            "key": "closed_hat",
+            "pattern": ".x.x.x.x.x.x.x.x",
+            "vel": 74,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 6,
+            "key": "closed_hat",
+            "pattern": ".x.x.x.x.x.x.x.x",
+            "vel": 74,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 8,
+            "key": "closed_hat",
+            "pattern": "..x...x...x...x.",
+            "vel": 70,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 2,
+            "key": "open_hat",
+            "pattern": "..x...x...x...x.",
+            "vel": 102,
+            "lengthSteps": 2
+          },
+          {
+            "bar": 4,
+            "key": "open_hat",
+            "pattern": "..x...x...x...x.",
+            "vel": 102,
+            "lengthSteps": 2
+          },
+          {
+            "bar": 6,
+            "key": "open_hat",
+            "pattern": "..x...x...x...x.",
+            "vel": 102,
+            "lengthSteps": 2
+          },
+          {
+            "bar": 8,
+            "key": "open_hat",
+            "pattern": "..x...x...x...x.",
+            "vel": 102,
+            "lengthSteps": 2
+          },
+          {
+            "bar": 1,
+            "key": "shaker",
+            "pattern": "..............x.",
+            "vel": 92,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 3,
+            "key": "shaker",
+            "pattern": "..............x.",
+            "vel": 92,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 5,
+            "key": "shaker",
+            "pattern": "..............x.",
+            "vel": 92,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 7,
+            "key": "shaker",
+            "pattern": "..............x.",
+            "vel": 92,
+            "lengthSteps": 1
+          },
+          {
+            "bar": 7,
+            "key": "clap",
+            "pattern": "...............x",
+            "vel": 120,
+            "lengthSteps": 1
+          }
+        ],
+        "repeatBars": 7,
+        "lengthSteps": 1
+      },
       "pattern": {
-        "lengthBars": 4,
+        "lengthBars": 8,
+        "steps": []
+      }
+    },
+    {
+      "id": "t-arp",
+      "name": "Arp Accent (track 5)",
+      "type": "synth",
+      "midiChannel": 4,
+      "role": "arp",
+      "pattern": {
+        "lengthBars": 8,
         "steps": [
-          { "idx": 0,  "events": [ { "degree": 1, "octaveOffset": -1, "velocity": 100, "lengthSteps": 2 } ] },
-          { "idx": 2,  "events": [ { "degree": 2, "octaveOffset": -1, "velocity": 96,  "lengthSteps": 1 } ] },
-          { "idx": 3,  "events": [ { "degree": 3, "octaveOffset": -1, "velocity": 94,  "lengthSteps": 1 } ] },
-          { "idx": 4,  "events": [ { "degree": 5, "octaveOffset": -1, "velocity": 104, "lengthSteps": 2 } ] },
-          { "idx": 6,  "events": [ { "degree": 6, "octaveOffset": -1, "velocity": 98,  "lengthSteps": 1, "ratchet": 2, "gate": 0.8 } ] },
-          { "idx": 7,  "events": [ { "degree": 5, "octaveOffset": -1, "velocity": 96,  "lengthSteps": 1 } ] },
-          { "idx": 9,  "events": [ { "degree": 4, "octaveOffset": -1, "velocity": 95,  "lengthSteps": 1 } ] },
-          { "idx": 11, "events": [ { "degree": 3, "octaveOffset": -1, "velocity": 94,  "lengthSteps": 1, "microshiftMs": 8 } ] },
-          { "idx": 12, "events": [ { "chord": "Cmaj7", "register": ["C3","B3"], "velocity": 92, "lengthSteps": 2 } ] },
-
-          { "idx": 16, "events": [ { "degree": 6, "octaveOffset": -1, "velocity": 102, "lengthSteps": 2 } ] },
-          { "idx": 18, "events": [ { "degree": 7, "octaveOffset": -1, "velocity": 100, "lengthSteps": 1 } ] },
-          { "idx": 19, "events": [ { "degree": 1, "octaveOffset": 0,  "velocity": 108, "lengthSteps": 2, "microshiftMs": 10 } ] },
-          { "idx": 20, "events": [ { "degree": 2, "octaveOffset": 0,  "velocity": 106, "lengthSteps": 1, "ratchet": 3, "gate": 0.7 } ] },
-          { "idx": 22, "events": [ { "degree": 3, "octaveOffset": 0,  "velocity": 104, "lengthSteps": 1 } ] },
-          { "idx": 24, "events": [ { "chord": "G7",    "register": ["B2","A3"], "velocity": 96, "lengthSteps": 2 } ] },
-          { "idx": 26, "events": [ { "degree": 2, "octaveOffset": 0,  "velocity": 102, "lengthSteps": 1 } ] },
-          { "idx": 27, "events": [ { "degree": 1, "octaveOffset": 0,  "velocity": 100, "lengthSteps": 1 } ] },
-          { "idx": 28, "events": [ { "degree": 6, "octaveOffset": -1, "velocity": 98,  "lengthSteps": 2 } ] },
-          { "idx": 31, "events": [ { "degree": 5, "octaveOffset": -1, "velocity": 96,  "lengthSteps": 1, "microshiftMs": 12, "prob": 1.0 } ] },
-
-          { "idx": 32, "events": [ { "degree": 4, "octaveOffset": -1, "velocity": 98,  "lengthSteps": 2 } ] },
-          { "idx": 34, "events": [ { "degree": 5, "octaveOffset": -1, "velocity": 96,  "lengthSteps": 1 } ] },
-          { "idx": 35, "events": [ { "degree": 6, "octaveOffset": -1, "velocity": 94,  "lengthSteps": 1 } ] },
-          { "idx": 36, "events": [ { "degree": 6, "octaveOffset": -1, "velocity": 100, "lengthSteps": 2, "ratchet": 2, "gate": 0.85 } ] },
-          { "idx": 39, "events": [ { "degree": 5, "octaveOffset": -1, "velocity": 96,  "lengthSteps": 1, "microshiftMs": 6 } ] },
-          { "idx": 40, "events": [ { "degree": 4, "octaveOffset": -1, "velocity": 95,  "lengthSteps": 2 } ] },
-          { "idx": 44, "events": [ { "chord": "Fmaj7", "register": ["C3","B3"], "velocity": 90, "lengthSteps": 2 } ] },
-
-          { "idx": 48, "events": [ { "degree": 2, "octaveOffset": -1, "velocity": 100, "lengthSteps": 2 } ] },
-          { "idx": 50, "events": [ { "degree": 3, "octaveOffset": -1, "velocity": 98,  "lengthSteps": 1 } ] },
-          { "idx": 51, "events": [ { "degree": 5, "octaveOffset": -1, "velocity": 100, "lengthSteps": 2, "ratchet": 3, "gate": 0.75 } ] },
-          { "idx": 54, "events": [ { "degree": 3, "octaveOffset": -1, "velocity": 96,  "lengthSteps": 1 } ] },
-          { "idx": 56, "events": [ { "degree": 5, "octaveOffset": -1, "velocity": 104, "lengthSteps": 2, "microshiftMs": 10 } ] },
-          { "idx": 58, "events": [ { "degree": 1, "octaveOffset": 0,  "velocity": 110, "lengthSteps": 3 } ] },
-          { "idx": 61, "events": [ { "degree": 7, "octaveOffset": -1, "velocity": 98,  "lengthSteps": 1 } ] },
-          { "idx": 62, "events": [ { "degree": 1, "octaveOffset": 0,  "velocity": 106, "lengthSteps": 1 } ] }
+          {
+            "idx": 28,
+            "events": [
+              {
+                "degree": 1,
+                "octaveOffset": 1,
+                "velocity": 92,
+                "lengthSteps": 1,
+                "gate": 0.8,
+                "microshiftMs": 3
+              }
+            ]
+          },
+          {
+            "idx": 29,
+            "events": [
+              {
+                "degree": 3,
+                "octaveOffset": 1,
+                "velocity": 94,
+                "lengthSteps": 1,
+                "gate": 0.8
+              }
+            ]
+          },
+          {
+            "idx": 30,
+            "events": [
+              {
+                "degree": 5,
+                "octaveOffset": 1,
+                "velocity": 96,
+                "lengthSteps": 1,
+                "gate": 0.8
+              }
+            ]
+          },
+          {
+            "idx": 31,
+            "events": [
+              {
+                "degree": 7,
+                "octaveOffset": 1,
+                "velocity": 98,
+                "lengthSteps": 1,
+                "gate": 0.8,
+                "microshiftMs": 4
+              }
+            ]
+          },
+          {
+            "idx": 60,
+            "events": [
+              {
+                "degree": 6,
+                "octaveOffset": 1,
+                "velocity": 90,
+                "lengthSteps": 1,
+                "gate": 0.78
+              }
+            ]
+          },
+          {
+            "idx": 61,
+            "events": [
+              {
+                "degree": 1,
+                "octaveOffset": 2,
+                "velocity": 92,
+                "lengthSteps": 1,
+                "gate": 0.78
+              }
+            ]
+          },
+          {
+            "idx": 62,
+            "events": [
+              {
+                "degree": 3,
+                "octaveOffset": 2,
+                "velocity": 94,
+                "lengthSteps": 1,
+                "gate": 0.78
+              }
+            ]
+          },
+          {
+            "idx": 63,
+            "events": [
+              {
+                "degree": 5,
+                "octaveOffset": 2,
+                "velocity": 96,
+                "lengthSteps": 1,
+                "gate": 0.78,
+                "microshiftMs": 3
+              }
+            ]
+          },
+          {
+            "idx": 92,
+            "events": [
+              {
+                "degree": 7,
+                "octaveOffset": 1,
+                "velocity": 90,
+                "lengthSteps": 1,
+                "gate": 0.78
+              }
+            ]
+          },
+          {
+            "idx": 93,
+            "events": [
+              {
+                "degree": 2,
+                "octaveOffset": 2,
+                "velocity": 92,
+                "lengthSteps": 1,
+                "gate": 0.78
+              }
+            ]
+          },
+          {
+            "idx": 94,
+            "events": [
+              {
+                "degree": 4,
+                "octaveOffset": 2,
+                "velocity": 94,
+                "lengthSteps": 1,
+                "gate": 0.78
+              }
+            ]
+          },
+          {
+            "idx": 95,
+            "events": [
+              {
+                "degree": 6,
+                "octaveOffset": 2,
+                "velocity": 96,
+                "lengthSteps": 1,
+                "gate": 0.78,
+                "microshiftMs": 3
+              }
+            ]
+          },
+          {
+            "idx": 124,
+            "events": [
+              {
+                "degree": 1,
+                "octaveOffset": 2,
+                "velocity": 96,
+                "lengthSteps": 1,
+                "gate": 0.8
+              }
+            ]
+          },
+          {
+            "idx": 125,
+            "events": [
+              {
+                "degree": 2,
+                "octaveOffset": 2,
+                "velocity": 98,
+                "lengthSteps": 1,
+                "gate": 0.8
+              }
+            ]
+          },
+          {
+            "idx": 126,
+            "events": [
+              {
+                "degree": 3,
+                "octaveOffset": 2,
+                "velocity": 100,
+                "lengthSteps": 1,
+                "gate": 0.8
+              }
+            ]
+          },
+          {
+            "idx": 127,
+            "events": [
+              {
+                "degree": 5,
+                "octaveOffset": 2,
+                "velocity": 104,
+                "lengthSteps": 1,
+                "gate": 0.8,
+                "ratchet": 2
+              }
+            ]
+          }
         ]
       }
-    }
-    ,
+    },
     {
-      "id": "t-chords",
-      "name": "Chords",
+      "id": "t-bass",
+      "name": "Bass (track 3)",
       "type": "synth",
-      "role": "pad",
-      "midiChannel": 6,
+      "midiChannel": 2,
+      "role": "bass",
       "pattern": {
-        "lengthBars": 4,
+        "lengthBars": 8,
         "steps": [
-          { "idx": 0,  "events": [ { "chord": "Cmaj7", "velocity": 88, "lengthSteps": 8, "register": ["C3","B4"] } ] },
-          { "idx": 8,  "events": [ { "chord": "G7",    "velocity": 90, "lengthSteps": 8, "register": ["B2","A4"] } ] },
-          { "idx": 16, "events": [ { "chord": "Am7",   "velocity": 86, "lengthSteps": 8, "register": ["C3","B4"] } ] },
-          { "idx": 24, "events": [ { "chord": "Dm7",   "velocity": 86, "lengthSteps": 8, "register": ["C3","B4"] } ] },
-          { "idx": 32, "events": [ { "chord": "Fmaj7", "velocity": 84, "lengthSteps": 8, "register": ["C3","B4"] } ] },
-          { "idx": 40, "events": [ { "chord": "G7",    "velocity": 88, "lengthSteps": 8, "register": ["B2","A4"] } ] },
-          { "idx": 48, "events": [ { "chord": "Dm7",   "velocity": 84, "lengthSteps": 8, "register": ["C3","B4"] } ] },
-          { "idx": 56, "events": [ { "chord": "G7",    "velocity": 88, "lengthSteps": 8, "register": ["B2","A4"] } ] }
+          {
+            "idx": 2,
+            "events": [
+              {
+                "pitch": 36,
+                "velocity": 108,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 6,
+            "events": [
+              {
+                "pitch": 36,
+                "velocity": 108,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 10,
+            "events": [
+              {
+                "pitch": 36,
+                "velocity": 108,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 14,
+            "events": [
+              {
+                "pitch": 36,
+                "velocity": 108,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 18,
+            "events": [
+              {
+                "pitch": 36,
+                "velocity": 108,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 22,
+            "events": [
+              {
+                "pitch": 36,
+                "velocity": 108,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 26,
+            "events": [
+              {
+                "pitch": 36,
+                "velocity": 110,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 30,
+            "events": [
+              {
+                "pitch": 36,
+                "velocity": 110,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 34,
+            "events": [
+              {
+                "pitch": 44,
+                "velocity": 108,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 38,
+            "events": [
+              {
+                "pitch": 44,
+                "velocity": 108,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 42,
+            "events": [
+              {
+                "pitch": 44,
+                "velocity": 108,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 46,
+            "events": [
+              {
+                "pitch": 44,
+                "velocity": 110,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 50,
+            "events": [
+              {
+                "pitch": 44,
+                "velocity": 110,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 54,
+            "events": [
+              {
+                "pitch": 44,
+                "velocity": 110,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 58,
+            "events": [
+              {
+                "pitch": 44,
+                "velocity": 110,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 62,
+            "events": [
+              {
+                "pitch": 44,
+                "velocity": 112,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 66,
+            "events": [
+              {
+                "pitch": 46,
+                "velocity": 110,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 70,
+            "events": [
+              {
+                "pitch": 46,
+                "velocity": 110,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 74,
+            "events": [
+              {
+                "pitch": 46,
+                "velocity": 110,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 78,
+            "events": [
+              {
+                "pitch": 46,
+                "velocity": 112,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 82,
+            "events": [
+              {
+                "pitch": 46,
+                "velocity": 112,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 86,
+            "events": [
+              {
+                "pitch": 46,
+                "velocity": 112,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 90,
+            "events": [
+              {
+                "pitch": 46,
+                "velocity": 112,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 94,
+            "events": [
+              {
+                "pitch": 46,
+                "velocity": 114,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 98,
+            "events": [
+              {
+                "pitch": 43,
+                "velocity": 114,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 102,
+            "events": [
+              {
+                "pitch": 43,
+                "velocity": 114,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 106,
+            "events": [
+              {
+                "pitch": 43,
+                "velocity": 114,
+                "lengthSteps": 2
+              }
+            ]
+          },
+          {
+            "idx": 110,
+            "events": [
+              {
+                "pitch": 36,
+                "velocity": 116,
+                "lengthSteps": 1
+              }
+            ]
+          },
+          {
+            "idx": 111,
+            "events": [
+              {
+                "pitch": 38,
+                "velocity": 108,
+                "lengthSteps": 1
+              }
+            ]
+          },
+          {
+            "idx": 112,
+            "events": [
+              {
+                "pitch": 41,
+                "velocity": 108,
+                "lengthSteps": 1
+              }
+            ]
+          },
+          {
+            "idx": 113,
+            "events": [
+              {
+                "pitch": 43,
+                "velocity": 112,
+                "lengthSteps": 1
+              }
+            ]
+          },
+          {
+            "idx": 114,
+            "events": [
+              {
+                "pitch": 36,
+                "velocity": 118,
+                "lengthSteps": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "t-lead",
+      "name": "Lead (track 4)",
+      "type": "synth",
+      "midiChannel": 3,
+      "role": "lead",
+      "pattern": {
+        "lengthBars": 8,
+        "steps": [
+          {
+            "idx": 2,
+            "events": [
+              {
+                "degree": 5,
+                "octaveOffset": 1,
+                "velocity": 105,
+                "lengthSteps": 2,
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 6,
+            "events": [
+              {
+                "degree": 3,
+                "octaveOffset": 1,
+                "velocity": 102,
+                "lengthSteps": 2,
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 10,
+            "events": [
+              {
+                "degree": 1,
+                "octaveOffset": 1,
+                "velocity": 100,
+                "lengthSteps": 1,
+                "gate": 0.85
+              }
+            ]
+          },
+          {
+            "idx": 14,
+            "events": [
+              {
+                "degree": 5,
+                "octaveOffset": 2,
+                "velocity": 104,
+                "lengthSteps": 1,
+                "gate": 0.85,
+                "microshiftMs": 6
+              }
+            ]
+          },
+          {
+            "idx": 34,
+            "events": [
+              {
+                "degree": 6,
+                "octaveOffset": 1,
+                "velocity": 104,
+                "lengthSteps": 2,
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 38,
+            "events": [
+              {
+                "degree": 3,
+                "octaveOffset": 1,
+                "velocity": 102,
+                "lengthSteps": 2,
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 42,
+            "events": [
+              {
+                "degree": 1,
+                "octaveOffset": 1,
+                "velocity": 101,
+                "lengthSteps": 1,
+                "gate": 0.85
+              }
+            ]
+          },
+          {
+            "idx": 46,
+            "events": [
+              {
+                "degree": 5,
+                "octaveOffset": 1,
+                "velocity": 103,
+                "lengthSteps": 2,
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 66,
+            "events": [
+              {
+                "degree": 7,
+                "octaveOffset": 1,
+                "velocity": 104,
+                "lengthSteps": 2,
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 70,
+            "events": [
+              {
+                "degree": 4,
+                "octaveOffset": 1,
+                "velocity": 103,
+                "lengthSteps": 2,
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 74,
+            "events": [
+              {
+                "degree": 2,
+                "octaveOffset": 1,
+                "velocity": 102,
+                "lengthSteps": 2,
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 78,
+            "events": [
+              {
+                "degree": 6,
+                "octaveOffset": 1,
+                "velocity": 104,
+                "lengthSteps": 2,
+                "gate": 0.8,
+                "ratchet": 2
+              }
+            ]
+          },
+          {
+            "idx": 98,
+            "events": [
+              {
+                "degree": 5,
+                "octaveOffset": 1,
+                "velocity": 106,
+                "lengthSteps": 2,
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 102,
+            "events": [
+              {
+                "degree": 2,
+                "octaveOffset": 1,
+                "velocity": 104,
+                "lengthSteps": 2,
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 106,
+            "events": [
+              {
+                "degree": 4,
+                "octaveOffset": 1,
+                "velocity": 104,
+                "lengthSteps": 2,
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 110,
+            "events": [
+              {
+                "degree": 5,
+                "octaveOffset": 1,
+                "velocity": 108,
+                "lengthSteps": 1,
+                "gate": 0.85,
+                "ratchet": 2,
+                "microshiftMs": 5
+              }
+            ]
+          },
+          {
+            "idx": 112,
+            "events": [
+              {
+                "degree": 1,
+                "octaveOffset": 1,
+                "velocity": 108,
+                "lengthSteps": 1,
+                "gate": 0.85,
+                "microshiftMs": 6
+              }
+            ]
+          },
+          {
+            "idx": 113,
+            "events": [
+              {
+                "degree": 2,
+                "octaveOffset": 1,
+                "velocity": 108,
+                "lengthSteps": 1,
+                "gate": 0.85
+              }
+            ]
+          },
+          {
+            "idx": 114,
+            "events": [
+              {
+                "degree": 3,
+                "octaveOffset": 1,
+                "velocity": 110,
+                "lengthSteps": 1,
+                "gate": 0.85
+              }
+            ]
+          },
+          {
+            "idx": 115,
+            "events": [
+              {
+                "degree": 5,
+                "octaveOffset": 1,
+                "velocity": 112,
+                "lengthSteps": 1,
+                "gate": 0.85,
+                "ratchet": 2
+              }
+            ]
+          },
+          {
+            "idx": 118,
+            "events": [
+              {
+                "degree": 1,
+                "octaveOffset": 2,
+                "velocity": 110,
+                "lengthSteps": 2,
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 15,
+            "events": [
+              {
+                "degree": 7,
+                "octaveOffset": 1,
+                "velocity": 96,
+                "lengthSteps": 1,
+                "gate": 0.85,
+                "microshiftMs": 4
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "t-chords7",
+      "name": "Chords (track 7)",
+      "type": "synth",
+      "midiChannel": 6,
+      "role": "pad",
+      "pattern": {
+        "lengthBars": 8,
+        "steps": [
+          {
+            "idx": 2,
+            "events": [
+              {
+                "chord": "Cm7",
+                "velocity": 94,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 10,
+            "events": [
+              {
+                "chord": "Cm7",
+                "velocity": 96,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 18,
+            "events": [
+              {
+                "chord": "Cm7",
+                "velocity": 94,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 26,
+            "events": [
+              {
+                "chord": "Cm7",
+                "velocity": 96,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 34,
+            "events": [
+              {
+                "chord": "Abmaj7",
+                "velocity": 94,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 42,
+            "events": [
+              {
+                "chord": "Abmaj7",
+                "velocity": 96,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 50,
+            "events": [
+              {
+                "chord": "Abmaj7",
+                "velocity": 94,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 58,
+            "events": [
+              {
+                "chord": "Abmaj7",
+                "velocity": 96,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 66,
+            "events": [
+              {
+                "chord": "Bbmaj7",
+                "velocity": 94,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 74,
+            "events": [
+              {
+                "chord": "Bbmaj7",
+                "velocity": 96,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 82,
+            "events": [
+              {
+                "chord": "Bbmaj7",
+                "velocity": 94,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 90,
+            "events": [
+              {
+                "chord": "Bbmaj7",
+                "velocity": 96,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 98,
+            "events": [
+              {
+                "chord": "G7",
+                "velocity": 96,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 106,
+            "events": [
+              {
+                "chord": "G7",
+                "velocity": 98,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.9
+              }
+            ]
+          },
+          {
+            "idx": 114,
+            "events": [
+              {
+                "chord": "Cm7",
+                "velocity": 100,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.95,
+                "microshiftMs": 6
+              }
+            ]
+          },
+          {
+            "idx": 122,
+            "events": [
+              {
+                "chord": "Cm7",
+                "velocity": 102,
+                "lengthSteps": 2,
+                "register": [
+                  "C3",
+                  "B4"
+                ],
+                "gate": 0.95,
+                "microshiftMs": 10
+              }
+            ]
+          }
         ]
       }
     }
   ],
-  "docVersion": 51
+  "docVersion": 60
 }
