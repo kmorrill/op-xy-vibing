@@ -173,9 +173,10 @@
           const right = document.createElement('span'); right.className = 'pill'; right.textContent = tr.type || 'sampler';
           h3.appendChild(left); h3.appendChild(right); div.appendChild(h3);
 
-          // Steps grid (pattern.steps) — always render a grid to allow adding notes
+          // Steps grid (pattern.steps) — render only if there are steps or no drumKit present
           const pat = tr.pattern || {}; const steps = Array.isArray(pat.steps) ? pat.steps : []; const bars = Math.max(1, pat.lengthBars || 1);
-          if (true) {
+          const showStepsGrid = (!tr.drumKit) || (steps.length > 0);
+          if (showStepsGrid) {
             const total = bars * spb;
             const vals = Array(total).fill(0);
             const stepIndexByAbs = new Map();
@@ -222,23 +223,16 @@
             div.appendChild(grid);
           }
 
-          // DrumKit patterns, if any – render as 16-step grid by hit type (rows)
+          // DrumKit patterns – render only core parts by default; show others only if present in JSON
           if (tr.drumKit && Array.isArray(tr.drumKit.patterns)) {
             const specs = tr.drumKit.patterns;
             const normalize = (s) => String(s||'').toLowerCase();
             const alias = (k) => ({ 'ch':'closed_hat','oh':'open_hat','hh':'closed_hat' }[k]||k);
-            // Canonical drum rows (order)
-            const rows = [
-              { id:'kick', label:'kick' }, { id:'kick_alt', label:'kick_alt' },
-              { id:'snare', label:'snare' }, { id:'snare_alt', label:'snare_alt' },
-              { id:'rim', label:'rim' }, { id:'clap', label:'clap' },
-              { id:'tambourine', label:'tamb' }, { id:'shaker', label:'shaker' },
-              { id:'closed_hat', label:'hh' }, { id:'open_hat', label:'oh' }, { id:'pedal_hat', label:'ph' },
-              { id:'low_tom', label:'lt' }, { id:'mid_tom', label:'mt' }, { id:'high_tom', label:'ht' },
-              { id:'crash', label:'crash' }, { id:'ride', label:'ride' },
-              { id:'cowbell', label:'cow' }, { id:'conga_low', label:'cl' }, { id:'conga_high', label:'ch' },
-              { id:'guiro', label:'guiro' }, { id:'metal', label:'metal' }, { id:'chi', label:'chi' },
-            ];
+            // Preferred ordering for known parts
+            const allOrder = ['kick','kick_alt','snare','snare_alt','rim','clap','tambourine','shaker','closed_hat','open_hat','pedal_hat','low_tom','mid_tom','high_tom','crash','ride','cowbell','conga_low','conga_high','guiro','metal','chi'];
+            // Core six shown by default (clicking adds if missing)
+            const core = ['kick','snare','closed_hat','open_hat','clap','ride'];
+            let rows = core.map(id => ({ id, label: id.replace('_',' ') }));
             // Build map key-> {pattern, specIndex} for current bar = 1
             const byKey = new Map();
             for (const s of specs) {
@@ -248,19 +242,20 @@
               if (bar !== 1) continue; // first pass: show bar 1
               byKey.set(key, { pattern: String(s.pattern), specIndex: specs.indexOf(s) });
             }
-            // Append any unknown keys as extra rows
-            for (const s of specs) {
-              const k = alias(normalize(s.key||''));
-              if (!rows.find(r=>r.id===k)) rows.push({ id:k, label:k });
-            }
+            // Only include additional rows if they appear in JSON; keep stable order
+            const present = Array.from(new Set(specs.map(s => alias(normalize(s.key||'')))));
+            const extras = present.filter(k => !core.includes(k));
+            extras.sort((a,b) => (allOrder.indexOf(a) - allOrder.indexOf(b)) || a.localeCompare(b));
+            rows = rows.concat(extras.map(id => ({ id, label: id.replace('_',' ') })));
             // Container
             const cont = document.createElement('div');
             cont.style.marginTop = '8px';
             // Render rows
             rows.forEach(r => {
               const ent = byKey.get(r.id);
-              if (!ent) return; // skip empty rows
-              const patt = ent.pattern; const specIndex = ent.specIndex;
+              const had = !!ent;
+              const patt = (ent ? ent.pattern : '.'.repeat(spb));
+              const specIndex = ent ? ent.specIndex : -1;
               const row = document.createElement('div'); row.style.display='flex'; row.style.alignItems='center'; row.style.gap='8px'; row.style.margin='2px 0';
               const lab = document.createElement('div'); lab.textContent = r.label; lab.style.width='64px'; lab.style.textAlign='right'; lab.style.fontSize='12px'; lab.style.color='#555';
               row.appendChild(lab);
@@ -271,14 +266,28 @@
                 if (i % spb === 0) c.style.outline='1px solid #ddd';
                 // Click to toggle drum hit in pattern string
                 c.addEventListener('click', () => {
-                  const chars = patt.split('');
+                  let chars = patt.split('');
                   if (i < chars.length) {
                     chars[i] = (chars[i] === 'x') ? '.' : 'x';
                   }
                   const next = chars.join('');
-                  const ops = [{ op: 'replace', path: `/tracks/${ti}/drumKit/patterns/${specIndex}/pattern`, value: next }];
+                  let ops;
+                  if (had) {
+                    ops = [{ op: 'replace', path: `/tracks/${ti}/drumKit/patterns/${specIndex}/pattern`, value: next }];
+                  } else {
+                    // Add a new spec row
+                    const spec = { bar: 1, key: r.id, pattern: next, vel: 100 };
+                    ops = [{ op: 'add', path: `/tracks/${ti}/drumKit/patterns/-`, value: spec }];
+                  }
                   const applyNow = document.getElementById('applyNow').checked; // structural; default next bar
-                  try { optimisticApplyPatch([{ op:'replace', path:`/tracks/${ti}/drumKit/patterns/${specIndex}/pattern`, value: next }]); renderDoc(); } catch(e){}
+                  try {
+                    if (had) {
+                      optimisticApplyPatch([{ op:'replace', path:`/tracks/${ti}/drumKit/patterns/${specIndex}/pattern`, value: next }]);
+                    } else {
+                      optimisticApplyPatch([{ op:'add', path:`/tracks/${ti}/drumKit/patterns/-`, value: { bar:1, key:r.id, pattern: next, vel:100 } }]);
+                    }
+                    renderDoc();
+                  } catch(e){}
                   sendPatch(ops, applyNow);
                 });
                 g.appendChild(c);

@@ -53,6 +53,17 @@ async def _recv_until(ws, want_types: set[str], timeout: float = 2.0):
 @pytest.mark.asyncio
 async def test_ws_roundtrip_sequential_patches(tmp_path: Path):
     loop_path = tmp_path / "loop.json"
+    # Provide an initial minimal loop on disk (server no longer defaults)
+    (tmp_path).mkdir(parents=True, exist_ok=True)
+    init = {
+        "version": "opxyloop-1.0",
+        "meta": {"tempo": 120, "ppq": 96, "stepsPerBar": 16},
+        "tracks": [
+            {"id": "t1", "name": "Track 1", "type": "sampler", "midiChannel": 0, "pattern": {"lengthBars": 1, "steps": []}}
+        ],
+        "docVersion": 0,
+    }
+    loop_path.write_text(json.dumps(init))
     # Start conductor with external clock (no internal tick thread needed)
     c = Conductor(str(loop_path), port_filter=None, bpm=120.0, clock_source="external")
     ws_port = _free_port()
@@ -101,6 +112,15 @@ async def test_ws_roundtrip_sequential_patches(tmp_path: Path):
 async def test_ws_stale_error_on_back_to_back_without_ack(tmp_path: Path):
     import contextlib
     loop_path = tmp_path / "loop.json"
+    init = {
+        "version": "opxyloop-1.0",
+        "meta": {"tempo": 120, "ppq": 96, "stepsPerBar": 16},
+        "tracks": [
+            {"id": "t1", "name": "Track 1", "type": "sampler", "midiChannel": 0, "pattern": {"lengthBars": 1, "steps": []}}
+        ],
+        "docVersion": 0,
+    }
+    loop_path.write_text(json.dumps(init))
     c = Conductor(str(loop_path), port_filter=None, bpm=120.0, clock_source="external")
     ws_port = _free_port()
     server_task = asyncio.create_task(serve_ws(c, "127.0.0.1", ws_port))
