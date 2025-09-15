@@ -1,0 +1,5 @@
+Collecting websockets
+  Using cached websockets-15.0.1-cp39-cp39-macosx_11_0_arm64.whl.metadata (6.8 kB)
+Using cached websockets-15.0.1-cp39-cp39-macosx_11_0_arm64.whl (173 kB)
+Installing collected packages: websockets
+Successfully installed websockets-15.0.1

@@ -68,8 +68,11 @@ class TestWSIntegration(unittest.IsolatedAsyncioTestCase):
         with contextlib.suppress(Exception):
             await self.ws.close()
         self.server_task.cancel()
-        with contextlib.suppress(Exception):
+        # CancelledError inherits from BaseException in 3.9; suppress explicitly
+        try:
             await self.server_task
+        except BaseException:
+            pass
 
     def _get_tmpdir(self) -> str:
         import tempfile
@@ -120,7 +123,11 @@ class TestWSIntegration(unittest.IsolatedAsyncioTestCase):
         # Capture initial docVersion
         doc0 = self.c.get_doc(); v0 = int(doc0.get("docVersion", 0))
         # Edit loop.json on disk: add a cowbell row (not in core UI set for this init)
+        # Ensure mtime resolution (some FS have 1s granularity)
+        await asyncio.sleep(1.1)
         obj = json.loads(self.loop_path.read_text())
+        # Ensure deviceProfile knows about cowbell so validator accepts the edit
+        obj.setdefault("deviceProfile", {}).setdefault("drumMap", {})["cowbell"] = 73
         patterns = obj["tracks"][0]["drumKit"]["patterns"]
         patterns.append({"bar": 1, "key": "cowbell", "pattern": "x...............", "vel": 105})
         self.loop_path.write_text(json.dumps(obj))
