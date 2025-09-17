@@ -8,12 +8,19 @@
     "mode": "ionian"
   },
   "deviceProfile": {
-    "portName": "OP-XY"
+    "portName": "OP-XY",
+    "drumMap": {
+      "kick": 53,
+      "rim": 57,
+      "shaker": 60,
+      "closed_hat": 61,
+      "ride": 68
+    }
   },
   "tracks": [
     {
       "id": "lead-force",
-      "name": "Binary Sunset Lead",
+      "name": "lead asinine",
       "type": "axis",
       "midiChannel": 0,
       "role": "lead",
@@ -521,11 +528,83 @@
             ]
           }
         ]
-      }
+      },
+      "ccLanes": [
+        {
+          "id": "lead-cutoff-spiral",
+          "dest": "name:cutoff",
+          "mode": "ramp",
+          "points": [
+            {
+              "t": {
+                "bar": 0,
+                "step": 0
+              },
+              "v": 68
+            },
+            {
+              "t": {
+                "bar": 5,
+                "step": 8
+              },
+              "v": 100
+            },
+            {
+              "t": {
+                "bar": 11,
+                "step": 0
+              },
+              "v": 52
+            },
+            {
+              "t": {
+                "bar": 15,
+                "step": 15
+              },
+              "v": 86
+            }
+          ]
+        },
+        {
+          "id": "lead-delay-orbit",
+          "dest": "name:send_fx1",
+          "mode": "points",
+          "points": [
+            {
+              "t": {
+                "bar": 0,
+                "step": 0
+              },
+              "v": 44
+            },
+            {
+              "t": {
+                "bar": 4,
+                "step": 12
+              },
+              "v": 82
+            },
+            {
+              "t": {
+                "bar": 9,
+                "step": 3
+              },
+              "v": 58
+            },
+            {
+              "t": {
+                "bar": 14,
+                "step": 6
+              },
+              "v": 104
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "pad-twin-suns",
-      "name": "Twin Suns Pad",
+      "name": "drums boop",
       "type": "dissolve",
       "midiChannel": 1,
       "role": "pad",
@@ -921,7 +1000,7 @@
       },
       "ccLanes": [
         {
-          "id": "pad-cutoff",
+          "id": "pad-cutoff-lattice",
           "dest": "name:cutoff",
           "mode": "ramp",
           "points": [
@@ -930,27 +1009,76 @@
                 "bar": 0,
                 "step": 0
               },
-              "v": 48
+              "v": 52
             },
             {
               "t": {
-                "bar": 7,
-                "step": 15
+                "bar": 6,
+                "step": 4
               },
-              "v": 80
+              "v": 94
+            },
+            {
+              "t": {
+                "bar": 10,
+                "step": 12
+              },
+              "v": 60
             },
             {
               "t": {
                 "bar": 15,
                 "step": 15
               },
-              "v": 96
+              "v": 104
             }
           ]
         },
         {
-          "id": "pad-reverb",
-          "dest": "name:send_fx1",
+          "id": "pad-reverb-cloud",
+          "dest": "name:send_fx2",
+          "mode": "points",
+          "points": [
+            {
+              "t": {
+                "bar": 0,
+                "step": 0
+              },
+              "v": 76
+            },
+            {
+              "t": {
+                "bar": 3,
+                "step": 8
+              },
+              "v": 108
+            },
+            {
+              "t": {
+                "bar": 7,
+                "step": 0
+              },
+              "v": 88
+            },
+            {
+              "t": {
+                "bar": 12,
+                "step": 11
+              },
+              "v": 118
+            },
+            {
+              "t": {
+                "bar": 15,
+                "step": 15
+              },
+              "v": 90
+            }
+          ]
+        },
+        {
+          "id": "pad-volume-ebb",
+          "dest": "name:track_volume",
           "mode": "ramp",
           "points": [
             {
@@ -958,21 +1086,28 @@
                 "bar": 0,
                 "step": 0
               },
-              "v": 72
+              "v": 110
             },
             {
               "t": {
-                "bar": 8,
-                "step": 0
+                "bar": 5,
+                "step": 4
+              },
+              "v": 92
+            },
+            {
+              "t": {
+                "bar": 9,
+                "step": 10
+              },
+              "v": 120
+            },
+            {
+              "t": {
+                "bar": 13,
+                "step": 6
               },
               "v": 88
-            },
-            {
-              "t": {
-                "bar": 15,
-                "step": 15
-              },
-              "v": 102
             }
           ]
         }
@@ -980,7 +1115,7 @@
     },
     {
       "id": "accomp-holo-arps",
-      "name": "Binary Dunes Arp",
+      "name": "phase2 sy-softwave",
       "type": "axis",
       "midiChannel": 2,
       "role": "accompaniment",
@@ -1628,8 +1763,236 @@
             ]
           }
         ]
-      }
+      },
+      "ccLanes": [
+        {
+          "id": "arp-cutoff-weave",
+          "dest": "name:cutoff",
+          "mode": "ramp",
+          "points": [
+            {
+              "t": {
+                "bar": 0,
+                "step": 0
+              },
+              "v": 66
+            },
+            {
+              "t": {
+                "bar": 4,
+                "step": 5
+              },
+              "v": 104
+            },
+            {
+              "t": {
+                "bar": 9,
+                "step": 9
+              },
+              "v": 58
+            },
+            {
+              "t": {
+                "bar": 13,
+                "step": 2
+              },
+              "v": 96
+            }
+          ]
+        },
+        {
+          "id": "arp-delay-echo",
+          "dest": "name:send_fx1",
+          "mode": "points",
+          "points": [
+            {
+              "t": {
+                "bar": 0,
+                "step": 0
+              },
+              "v": 50
+            },
+            {
+              "t": {
+                "bar": 3,
+                "step": 4
+              },
+              "v": 88
+            },
+            {
+              "t": {
+                "bar": 8,
+                "step": 7
+              },
+              "v": 62
+            },
+            {
+              "t": {
+                "bar": 11,
+                "step": 15
+              },
+              "v": 98
+            },
+            {
+              "t": {
+                "bar": 15,
+                "step": 8
+              },
+              "v": 70
+            }
+          ]
+        },
+        {
+          "id": "arp-reverb-shimmer",
+          "dest": "name:send_fx2",
+          "mode": "ramp",
+          "points": [
+            {
+              "t": {
+                "bar": 0,
+                "step": 0
+              },
+              "v": 72
+            },
+            {
+              "t": {
+                "bar": 6,
+                "step": 12
+              },
+              "v": 112
+            },
+            {
+              "t": {
+                "bar": 10,
+                "step": 3
+              },
+              "v": 86
+            },
+            {
+              "t": {
+                "bar": 15,
+                "step": 15
+              },
+              "v": 120
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "drums-lounge",
+      "name": "pluck on tape",
+      "type": "sampler",
+      "midiChannel": 3,
+      "role": "drums",
+      "drumKit": {
+        "patterns": [
+          {
+            "bar": 1,
+            "key": "kick",
+            "pattern": "x...x...x...x...",
+            "vel": 88
+          },
+          {
+            "bar": 1,
+            "key": "rim",
+            "pattern": "....x.......x...",
+            "vel": 78
+          },
+          {
+            "bar": 1,
+            "key": "shaker",
+            "pattern": ".x.x.x.x.x.x.x.x",
+            "vel": 64
+          },
+          {
+            "bar": 9,
+            "key": "ride",
+            "pattern": "..x...x...x...x.",
+            "vel": 72,
+            "repeatBars": 8
+          }
+        ],
+        "repeatBars": 16,
+        "lengthSteps": 1
+      },
+      "pattern": {
+        "lengthBars": 16,
+        "steps": []
+      },
+      "ccLanes": [
+        {
+          "id": "drum-room-glide",
+          "dest": "name:send_fx2",
+          "mode": "points",
+          "points": [
+            {
+              "t": {
+                "bar": 0,
+                "step": 0
+              },
+              "v": 70
+            },
+            {
+              "t": {
+                "bar": 4,
+                "step": 0
+              },
+              "v": 96
+            },
+            {
+              "t": {
+                "bar": 9,
+                "step": 8
+              },
+              "v": 82
+            },
+            {
+              "t": {
+                "bar": 14,
+                "step": 0
+              },
+              "v": 110
+            }
+          ]
+        },
+        {
+          "id": "drum-volume-pulse",
+          "dest": "name:track_volume",
+          "mode": "ramp",
+          "points": [
+            {
+              "t": {
+                "bar": 0,
+                "step": 0
+              },
+              "v": 100
+            },
+            {
+              "t": {
+                "bar": 5,
+                "step": 8
+              },
+              "v": 90
+            },
+            {
+              "t": {
+                "bar": 11,
+                "step": 4
+              },
+              "v": 108
+            },
+            {
+              "t": {
+                "bar": 15,
+                "step": 15
+              },
+              "v": 94
+            }
+          ]
+        }
+      ]
     }
   ],
-  "docVersion": 2
+  "docVersion": 6
 }
