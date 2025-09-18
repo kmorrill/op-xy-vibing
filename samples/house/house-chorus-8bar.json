@@ -1,0 +1,99 @@
+{
+  "version": "opxyloop-1.0",
+  "meta": { "tempo": 125, "ppq": 96, "stepsPerBar": 16 },
+  "deviceProfile": {
+    "portName": "OP-XY",
+    "drumMap": {
+      "kick": 53,
+      "snare": 55,
+      "clap": 58,
+      "closed_hat": 61,
+      "open_hat": 62,
+      "low_tom": 65,
+      "crash": 66,
+      "mid_tom": 67,
+      "ride": 68,
+      "high_tom": 69
+    }
+  },
+  "tracks": [
+    {
+      "id": "t-drums-house",
+      "name": "House Drums (chorus)",
+      "type": "sampler",
+      "midiChannel": 0,
+      "role": "drums",
+      "drumKit": {
+        "patterns": [
+          { "bar": 1, "key": "kick",       "pattern": "x...x...x...x...", "vel": 122, "lengthSteps": 1 },
+          { "bar": 1, "key": "clap",       "pattern": "....x.......x...", "vel": 118, "lengthSteps": 1, "repeatBars": 7 },
+          { "bar": 1, "key": "snare",      "pattern": "....x.......x...", "vel": 96,  "lengthSteps": 1, "repeatBars": 7 },
+          { "bar": 1, "key": "closed_hat", "pattern": ".x.x.x.x.x.x.x.x", "vel": 70,  "lengthSteps": 1, "repeatBars": 7 },
+          { "bar": 1, "key": "open_hat",   "pattern": "..x...x...x...x.", "vel": 100, "lengthSteps": 2, "repeatBars": 7 },
+          { "bar": 5, "key": "crash",      "pattern": "x...............", "vel": 120, "lengthSteps": 4 },
+          { "bar": 8, "key": "snare",      "pattern": "............xxxx", "vel": 110, "lengthSteps": 1 },
+          { "bar": 8, "key": "low_tom",    "pattern": "............x...", "vel": 108, "lengthSteps": 2 },
+          { "bar": 8, "key": "mid_tom",    "pattern": ".............x..", "vel": 108, "lengthSteps": 2 },
+          { "bar": 8, "key": "high_tom",   "pattern": "..............x.", "vel": 108, "lengthSteps": 2 },
+          { "bar": 8, "key": "ride",       "pattern": ".x.x.x.x.x.x.x.x", "vel": 88,  "lengthSteps": 1 }
+        ],
+        "repeatBars": 7,
+        "lengthSteps": 1
+      },
+      "pattern": { "lengthBars": 8, "steps": [] }
+    },
+    {
+      "id": "t-bass",
+      "name": "Bass (track 3)",
+      "type": "synth",
+      "midiChannel": 2,
+      "role": "bass",
+      "pattern": {
+        "lengthBars": 8,
+        "steps": [
+          
+          { "idx": 2,  "events": [ { "pitch": 36, "velocity": 108, "lengthSteps": 2 } ] },
+          { "idx": 6,  "events": [ { "pitch": 36, "velocity": 108, "lengthSteps": 2 } ] },
+          { "idx": 10, "events": [ { "pitch": 36, "velocity": 108, "lengthSteps": 2 } ] },
+          { "idx": 14, "events": [ { "pitch": 36, "velocity": 108, "lengthSteps": 2 } ] },
+
+          { "idx": 18, "events": [ { "pitch": 36, "velocity": 108, "lengthSteps": 2 } ] },
+          { "idx": 22, "events": [ { "pitch": 36, "velocity": 108, "lengthSteps": 2 } ] },
+          { "idx": 26, "events": [ { "pitch": 36, "velocity": 108, "lengthSteps": 2 } ] },
+          { "idx": 30, "events": [ { "pitch": 36, "velocity": 110, "lengthSteps": 2 } ] },
+
+          { "idx": 34, "events": [ { "pitch": 36, "velocity": 108, "lengthSteps": 2 } ] },
+          { "idx": 38, "events": [ { "pitch": 36, "velocity": 108, "lengthSteps": 2 } ] },
+          { "idx": 42, "events": [ { "pitch": 36, "velocity": 108, "lengthSteps": 2 } ] },
+          { "idx": 46, "events": [ { "pitch": 36, "velocity": 110, "lengthSteps": 2 } ] },
+
+          { "idx": 50, "events": [ { "pitch": 36, "velocity": 110, "lengthSteps": 2 } ] },
+          { "idx": 54, "events": [ { "pitch": 36, "velocity": 110, "lengthSteps": 2 } ] },
+          { "idx": 58, "events": [ { "pitch": 36, "velocity": 110, "lengthSteps": 2 } ] },
+          { "idx": 62, "events": [ { "pitch": 36, "velocity": 112, "lengthSteps": 2 } ] },
+
+          { "idx": 66, "events": [ { "pitch": 36, "velocity": 110, "lengthSteps": 2 } ] },
+          { "idx": 70, "events": [ { "pitch": 36, "velocity": 110, "lengthSteps": 2 } ] },
+          { "idx": 74, "events": [ { "pitch": 36, "velocity": 110, "lengthSteps": 2 } ] },
+          { "idx": 78, "events": [ { "pitch": 36, "velocity": 112, "lengthSteps": 2 } ] },
+
+          { "idx": 82, "events": [ { "pitch": 36, "velocity": 112, "lengthSteps": 2 } ] },
+          { "idx": 86, "events": [ { "pitch": 36, "velocity": 112, "lengthSteps": 2 } ] },
+          { "idx": 90, "events": [ { "pitch": 36, "velocity": 112, "lengthSteps": 2 } ] },
+          { "idx": 94, "events": [ { "pitch": 36, "velocity": 114, "lengthSteps": 2 } ] },
+
+          { "idx": 98,  "events": [ { "pitch": 36, "velocity": 114, "lengthSteps": 2 } ] },
+          { "idx": 102, "events": [ { "pitch": 36, "velocity": 114, "lengthSteps": 2 } ] },
+          { "idx": 106, "events": [ { "pitch": 36, "velocity": 114, "lengthSteps": 2 } ] },
+
+          { "idx": 110, "events": [ { "pitch": 36, "velocity": 116, "lengthSteps": 1 } ] },
+          { "idx": 111, "events": [ { "pitch": 38, "velocity": 108, "lengthSteps": 1 } ] },
+          { "idx": 112, "events": [ { "pitch": 41, "velocity": 108, "lengthSteps": 1 } ] },
+          { "idx": 113, "events": [ { "pitch": 43, "velocity": 112, "lengthSteps": 1 } ] },
+          { "idx": 114, "events": [ { "pitch": 36, "velocity": 118, "lengthSteps": 2 } ] }
+        ]
+      }
+    }
+  ],
+  "docVersion": 54
+}
