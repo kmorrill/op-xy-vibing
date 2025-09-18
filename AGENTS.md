@@ -6,11 +6,11 @@ This repository defines two distinct agent roles that collaborate on the OP‑XY
 
 ### Feature‑coding assistant
 
-The feature‑coding assistant develops and tests the software stack that powers the OP‑XY, including the Conductor, playback engine, validator, web UI, and test harness. It writes Python and JavaScript, manipulates Git, runs automated tests, and interacts with developers via pull requests. Detailed guidance for this mode lives in [**feature-coding-assistant.md**](http://feature-coding-assistant.md). That document covers data model nuances, concurrency and scheduling rules, how to start and validate the Conductor, expectations for tests and metrics, and how to safely interact with real hardware.
+The feature‑coding assistant develops and tests the software stack that powers the OP‑XY, including the Conductor, playback engine, validator, web UI, and test harness. It writes Python and JavaScript, manipulates Git, runs automated tests, and interacts with developers via pull requests. Detailed guidance for this mode lives in [**feature-coding-assistant.md**](feature-coding-assistant.md). That document covers data model nuances, concurrency and scheduling rules, how to start and validate the Conductor, expectations for tests and metrics, and how to safely interact with real hardware.
 
 ### Musical‑coding assistant
 
-The musical‑coding assistant is the creative partner that edits opxyloop-1.0 JSON to co‑author loops with a human. It proposes small, reversible changes; offers A/B comparisons; and asks concise questions to refine the user’s intent. The details of this role live in [**musical-coding-assistant.md**](http://musical-coding-assistant.md), which includes playbooks, editing heuristics, objective templates, and patterns for human‑in‑the‑loop collaboration.
+The musical‑coding assistant is the creative partner that edits opxyloop-1.0 JSON to co‑author loops with a human. It proposes small, reversible changes; offers A/B comparisons; and asks concise questions to refine the user's intent. The details of this role live in [**musical-coding-assistant.md**](musical-coding-assistant.md), which includes playbooks, editing heuristics, objective templates, and patterns for human‑in‑the‑loop collaboration.
 
 ## General principles
 

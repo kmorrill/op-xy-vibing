@@ -22,10 +22,44 @@ git clone https://github.com/your-username/op-xy-vibing.git
 cd op-xy-vibing
 ```
 
-2. Install Python dependencies:
+2. Install system dependencies (macOS):
 ```bash
-pip install -r requirements.txt
+# Install Python if not already installed
+brew install python
+
+# Install MIDI system dependencies (required for python-rtmidi)
+brew install pkg-config
+brew install portmidi
 ```
+
+3. Install Python dependencies:
+```bash
+# Install the required packages
+pip3 install -r requirements.txt
+
+# Or install individually if needed:
+pip3 install mido>=1.3 python-rtmidi>=1.5 websockets>=11 jsonpatch>=1.33
+```
+
+4. Verify MIDI setup:
+```bash
+# Check that your OP-XY is detected
+python3 -c "import mido; print('Available MIDI ports:', mido.get_output_names())"
+```
+
+### Starting the System
+
+Start the conductor server (simplest method):
+```bash
+python3 -m conductor.conductor_server --loop loop.json --port "OP-XY"
+```
+
+Then serve the UI in another terminal:
+```bash
+make ui-serve
+```
+
+Access the web interface at `http://127.0.0.1:8080`
 
 ### Running the System
 
@@ -41,17 +75,21 @@ make play-external LOOP=loop.json PORT="OP-XY"
 ```
 
 #### Full Conductor Server (with WebSocket API)
-Start the conductor server with web interface:
+Alternative using Makefile:
 ```bash
 make conductor-run LOOP=loop.json PORT="OP-XY" BPM=120 CLOCK=external
 ```
 
-Then serve the UI:
+Direct command with all options:
 ```bash
-make ui-serve
+python3 -m conductor.conductor_server \
+  --loop loop.json \
+  --port "OP-XY" \
+  --bpm 120 \
+  --clock-source external \
+  --ws-host 127.0.0.1 \
+  --ws-port 8765
 ```
-
-Access the web interface at `http://127.0.0.1:8080`
 
 ### Testing the Installation
 
@@ -211,9 +249,42 @@ This project is open source. See `LICENSE` file for details.
 
 ## Troubleshooting
 
+### Installation Issues
+
+#### Python/pip not found
+```bash
+# On macOS, install Python via Homebrew
+brew install python
+
+# Use python3 and pip3 explicitly
+python3 --version
+pip3 --version
+```
+
+#### python-rtmidi installation fails
+```bash
+# Install system dependencies first
+brew install pkg-config portmidi
+
+# Then retry pip install
+pip3 install python-rtmidi>=1.5
+```
+
+#### ModuleNotFoundError
+```bash
+# Make sure you're in the project directory
+cd op-xy-vibing
+
+# Verify dependencies are installed
+pip3 list | grep -E "(mido|rtmidi|websockets|jsonpatch)"
+
+# Reinstall if needed
+pip3 install -r requirements.txt
+```
+
 ### MIDI Connection Issues
 - Ensure OP‑XY is connected via USB-C
-- Check MIDI port name: `python -c "import mido; print(mido.get_output_names())"`
+- Check MIDI port name: `python3 -c "import mido; print(mido.get_output_names())"`
 - Use correct port name in `PORT` parameter
 
 ### Timing Problems
