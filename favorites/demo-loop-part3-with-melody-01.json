@@ -775,18 +775,48 @@
                         "events": [
                             {
                                 "pitch": 76,
-                                "velocity": 102,
+                                "velocity": 100,
                                 "lengthSteps": 2,
                                 "microshiftMs": -1
                             }
                         ]
                     },
                     {
-                        "idx": 9,
+                        "idx": 8,
                         "events": [
                             {
                                 "pitch": 79,
                                 "velocity": 106,
+                                "lengthSteps": 4
+                            }
+                        ]
+                    },
+                    {
+                        "idx": 18,
+                        "events": [
+                            {
+                                "pitch": 70,
+                                "velocity": 102,
+                                "lengthSteps": 4
+                            }
+                        ]
+                    },
+                    {
+                        "idx": 22,
+                        "events": [
+                            {
+                                "pitch": 74,
+                                "velocity": 100,
+                                "lengthSteps": 2
+                            }
+                        ]
+                    },
+                    {
+                        "idx": 25,
+                        "events": [
+                            {
+                                "pitch": 77,
+                                "velocity": 104,
                                 "lengthSteps": 3
                             }
                         ]
@@ -796,7 +826,7 @@
                         "events": [
                             {
                                 "pitch": 69,
-                                "velocity": 102,
+                                "velocity": 100,
                                 "lengthSteps": 4
                             }
                         ]
@@ -806,7 +836,7 @@
                         "events": [
                             {
                                 "pitch": 72,
-                                "velocity": 104,
+                                "velocity": 102,
                                 "lengthSteps": 2
                             }
                         ]
@@ -816,17 +846,47 @@
                         "events": [
                             {
                                 "pitch": 76,
-                                "velocity": 107,
+                                "velocity": 105,
+                                "lengthSteps": 4
+                            }
+                        ]
+                    },
+                    {
+                        "idx": 48,
+                        "events": [
+                            {
+                                "pitch": 67,
+                                "velocity": 100,
+                                "lengthSteps": 4
+                            }
+                        ]
+                    },
+                    {
+                        "idx": 52,
+                        "events": [
+                            {
+                                "pitch": 70,
+                                "velocity": 98,
+                                "lengthSteps": 2
+                            }
+                        ]
+                    },
+                    {
+                        "idx": 55,
+                        "events": [
+                            {
+                                "pitch": 74,
+                                "velocity": 102,
                                 "lengthSteps": 3
                             }
                         ]
                     },
                     {
-                        "idx": 65,
+                        "idx": 64,
                         "events": [
                             {
                                 "pitch": 76,
-                                "velocity": 106,
+                                "velocity": 104,
                                 "lengthSteps": 4
                             }
                         ]
@@ -836,7 +896,7 @@
                         "events": [
                             {
                                 "pitch": 79,
-                                "velocity": 108,
+                                "velocity": 106,
                                 "lengthSteps": 2
                             }
                         ]
@@ -846,187 +906,79 @@
                         "events": [
                             {
                                 "pitch": 81,
-                                "velocity": 110,
+                                "velocity": 108,
+                                "lengthSteps": 4
+                            }
+                        ]
+                    },
+                    {
+                        "idx": 80,
+                        "events": [
+                            {
+                                "pitch": 77,
+                                "velocity": 104,
+                                "lengthSteps": 4
+                            }
+                        ]
+                    },
+                    {
+                        "idx": 84,
+                        "events": [
+                            {
+                                "pitch": 74,
+                                "velocity": 100,
+                                "lengthSteps": 2
+                            }
+                        ]
+                    },
+                    {
+                        "idx": 87,
+                        "events": [
+                            {
+                                "pitch": 70,
+                                "velocity": 98,
                                 "lengthSteps": 3
                             }
                         ]
                     },
                     {
-                        "idx": 97,
+                        "idx": 96,
                         "events": [
                             {
                                 "pitch": 72,
-                                "velocity": 106,
-                                "lengthSteps": 3
+                                "velocity": 104,
+                                "lengthSteps": 4
                             }
                         ]
                     },
                     {
-                        "idx": 101,
+                        "idx": 100,
                         "events": [
                             {
                                 "pitch": 69,
-                                "velocity": 104,
+                                "velocity": 100,
                                 "lengthSteps": 2
                             }
                         ]
                     },
                     {
-                        "idx": 104,
+                        "idx": 103,
                         "events": [
                             {
                                 "pitch": 77,
-                                "velocity": 108,
+                                "velocity": 104,
                                 "lengthSteps": 3
                             }
                         ]
                     },
                     {
-                        "idx": 108,
+                        "idx": 112,
                         "events": [
                             {
                                 "pitch": 79,
                                 "velocity": 110,
                                 "lengthSteps": 2,
                                 "microshiftMs": -1
-                            }
-                        ]
-                    }
-                ]
-            }
-        },
-        {
-            "id": "track5-response",
-            "name": "Lead Response",
-            "type": "synth",
-            "midiChannel": 4,
-            "role": "melody",
-            "pattern": {
-                "lengthBars": 8,
-                "steps": [
-                    {
-                        "idx": 18,
-                        "events": [
-                            {
-                                "pitch": 70,
-                                "velocity": 100,
-                                "lengthSteps": 3,
-                                "microshiftMs": -2
-                            }
-                        ]
-                    },
-                    {
-                        "idx": 22,
-                        "events": [
-                            {
-                                "pitch": 74,
-                                "velocity": 98,
-                                "lengthSteps": 2
-                            }
-                        ]
-                    },
-                    {
-                        "idx": 26,
-                        "events": [
-                            {
-                                "pitch": 77,
-                                "velocity": 102,
-                                "lengthSteps": 3
-                            }
-                        ]
-                    },
-                    {
-                        "idx": 29,
-                        "events": [
-                            {
-                                "pitch": 81,
-                                "velocity": 104,
-                                "lengthSteps": 2,
-                                "microshiftMs": 1
-                            }
-                        ]
-                    },
-                    {
-                        "idx": 50,
-                        "events": [
-                            {
-                                "pitch": 67,
-                                "velocity": 100,
-                                "lengthSteps": 3,
-                                "microshiftMs": -1
-                            }
-                        ]
-                    },
-                    {
-                        "idx": 54,
-                        "events": [
-                            {
-                                "pitch": 70,
-                                "velocity": 98,
-                                "lengthSteps": 2
-                            }
-                        ]
-                    },
-                    {
-                        "idx": 58,
-                        "events": [
-                            {
-                                "pitch": 74,
-                                "velocity": 102,
-                                "lengthSteps": 3
-                            }
-                        ]
-                    },
-                    {
-                        "idx": 61,
-                        "events": [
-                            {
-                                "pitch": 76,
-                                "velocity": 104,
-                                "lengthSteps": 2,
-                                "microshiftMs": 1
-                            }
-                        ]
-                    },
-                    {
-                        "idx": 82,
-                        "events": [
-                            {
-                                "pitch": 75,
-                                "velocity": 102,
-                                "lengthSteps": 3,
-                                "microshiftMs": -1
-                            }
-                        ]
-                    },
-                    {
-                        "idx": 86,
-                        "events": [
-                            {
-                                "pitch": 79,
-                                "velocity": 104,
-                                "lengthSteps": 2
-                            }
-                        ]
-                    },
-                    {
-                        "idx": 89,
-                        "events": [
-                            {
-                                "pitch": 81,
-                                "velocity": 106,
-                                "lengthSteps": 3
-                            }
-                        ]
-                    },
-                    {
-                        "idx": 92,
-                        "events": [
-                            {
-                                "pitch": 84,
-                                "velocity": 108,
-                                "lengthSteps": 2,
-                                "microshiftMs": 1
                             }
                         ]
                     },
@@ -1034,8 +986,8 @@
                         "idx": 114,
                         "events": [
                             {
-                                "pitch": 83,
-                                "velocity": 110,
+                                "pitch": 81,
+                                "velocity": 108,
                                 "lengthSteps": 2
                             }
                         ]
@@ -1044,8 +996,8 @@
                         "idx": 116,
                         "events": [
                             {
-                                "pitch": 86,
-                                "velocity": 112,
+                                "pitch": 84,
+                                "velocity": 110,
                                 "lengthSteps": 2
                             }
                         ]
@@ -1054,8 +1006,8 @@
                         "idx": 118,
                         "events": [
                             {
-                                "pitch": 88,
-                                "velocity": 110,
+                                "pitch": 82,
+                                "velocity": 108,
                                 "lengthSteps": 2,
                                 "microshiftMs": -1
                             }
@@ -1065,7 +1017,7 @@
                         "idx": 120,
                         "events": [
                             {
-                                "pitch": 86,
+                                "pitch": 79,
                                 "velocity": 106,
                                 "lengthSteps": 2
                             }
@@ -1075,19 +1027,29 @@
                         "idx": 122,
                         "events": [
                             {
-                                "pitch": 83,
+                                "pitch": 76,
                                 "velocity": 104,
                                 "lengthSteps": 2
                             }
                         ]
                     },
                     {
-                        "idx": 125,
+                        "idx": 124,
                         "events": [
                             {
-                                "pitch": 79,
-                                "velocity": 102,
-                                "lengthSteps": 3
+                                "pitch": 74,
+                                "velocity": 104,
+                                "lengthSteps": 2
+                            }
+                        ]
+                    },
+                    {
+                        "idx": 126,
+                        "events": [
+                            {
+                                "pitch": 72,
+                                "velocity": 108,
+                                "lengthSteps": 2
                             }
                         ]
                     }
@@ -1095,5 +1057,5 @@
             }
         }
     ],
-    "docVersion": 7
+    "docVersion": 6
 }
