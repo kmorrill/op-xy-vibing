@@ -1,67 +1,122 @@
 # OP‑XY Vibe Coding
 
-A real-time music creation system for the OP‑XY that enables collaborative composition with AI agents through a JSON-based loop format.
+**Create music collaboratively with AI agents and your OP‑XY in real-time.**
 
-## Overview
+## What is this?
 
-This project allows you to co-create music with AI agents that edit a canonical loop JSON file (`opxyloop‑1.0`) while a Python engine plays it back in real-time to the OP‑XY device. The system prioritizes glitch-free playback, bulletproof note lifecycle management, and observable behavior with tight timing constraints.
+OP‑XY Vibe Coding lets you make music by talking to AI assistants like Claude or Codex. Instead of clicking around in a DAW, you describe what you want ("make the kick punchier", "add a subtle hi-hat shuffle", "try a darker pad sound") and the AI edits your music loop in real-time while you listen.
 
-## Quick Start
+**How it works:**
+1. Your music loop is stored as a JSON file that describes drums, bass, chords, and effects
+2. A Python server reads this file and plays it on your OP‑XY via USB-C  
+3. AI assistants edit the JSON while you listen, making changes instantly audible
+4. You collaborate with the AI to refine the loop until it sounds exactly right
 
-### Prerequisites
+**Perfect for:**
+- Quick musical idea exploration and prototyping
+- Learning music production concepts through conversation  
+- Breaking through creative blocks with AI collaboration
+- Rapid iteration on beats, basslines, and chord progressions
 
-- Python 3.7+
-- OP‑XY device connected via USB-C
-- macOS (primary development platform)
+## First Time Setup
 
-### Installation
+**What you'll need:**
+- An OP‑XY device connected via USB-C
+- A Mac computer (primary platform - other platforms may work but aren't tested)
+- 5-10 minutes for setup
 
-1. Clone the repository:
+### Step 1: Get the Code
+
 ```bash
 git clone https://github.com/your-username/op-xy-vibing.git
 cd op-xy-vibing
 ```
 
-2. Install system dependencies (macOS):
-```bash
-# Install Python if not already installed
-brew install python
+### Step 2: Install Dependencies
 
-# Install MIDI system dependencies (required for python-rtmidi)
-brew install pkg-config
-brew install portmidi
+**Install system tools (if not already installed):**
+```bash
+# Install Python and MIDI support
+brew install python pkg-config portmidi
 ```
 
-3. Install Python dependencies:
+**Set up Python environment:**
 ```bash
-# Install the required packages
-pip3 install -r requirements.txt
+# Create isolated environment (recommended)
+python3 -m venv venv
+source venv/bin/activate
 
-# Or install individually if needed:
-pip3 install mido>=1.3 python-rtmidi>=1.5 websockets>=11 jsonpatch>=1.33
+# Install music software dependencies
+pip install -r requirements.txt
 ```
 
-4. Verify MIDI setup:
+### Step 3: Test Your Setup
+
+**Make sure your OP‑XY is detected:**
 ```bash
-# Check that your OP-XY is detected
-python3 -c "import mido; print('Available MIDI ports:', mido.get_output_names())"
+# Should show "OP-XY" in the list
+python3 -c "import mido; print('MIDI ports:', mido.get_output_names())"
 ```
 
-### Starting the System
+If you don't see "OP-XY" in the list, check that:
+- Your OP‑XY is powered on and connected via USB-C
+- The USB-C cable supports data (not just charging)
+- You're using a USB-C port, not just USB-A with an adapter
 
-Start the conductor server (simplest method):
+### Step 4: Start Making Music
+
+**Launch the server (keep this terminal open):**
 ```bash
+# Activate your Python environment first
+source venv/bin/activate
+
+# Start the music server
 python3 -m conductor.conductor_server --loop loop.json --port "OP-XY"
 ```
 
-Then serve the UI in another terminal:
-```bash
-make ui-serve
+You should see:
+```
+[http] serving UI on http://127.0.0.1:8080  
+[ws] Conductor listening on ws://127.0.0.1:8765
 ```
 
-Access the web interface at `http://127.0.0.1:8080`
+**Open the web interface:**
+- Go to http://127.0.0.1:8080 in your browser
+- You should see a loop grid with drums, bass, and other tracks
+- Press play to hear the current loop on your OP‑XY
 
-### Running the System
+**🎉 You're ready!** The system is now running and you can start collaborating with AI assistants.
+
+## Working with AI Assistants
+
+This system is designed to work with AI coding assistants like Claude, Codex, or ChatGPT. The AI can help you:
+
+**🎵 Edit your music in real-time:**
+- "Make the kick drum hit harder on beats 1 and 3"
+- "Add a subtle swing to the hi-hats"  
+- "Try a darker, more mysterious chord progression"
+- "Speed up the tempo to 128 BPM"
+
+**🔧 Manage the system:**
+- Start and stop the server
+- Debug MIDI connection issues
+- Add new features to the loop format
+- Run tests and validate changes
+
+**📖 Learn and explore:**
+- "Explain how LFOs work in this system"
+- "Show me different drum patterns I could try"
+- "What's the difference between internal and external clock?"
+
+### For AI Assistants
+
+If you're an AI assistant helping someone with this system, check the `CLAUDE.md` file for detailed guidance on:
+- How to safely start and stop the server
+- The loop JSON format and how to edit it
+- MIDI device safety and troubleshooting
+- Testing and validation procedures
+
+## Advanced Usage
 
 #### Basic Playback
 Play a loop with internal clock:
