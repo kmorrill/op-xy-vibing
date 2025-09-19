@@ -168,6 +168,9 @@ class Conductor:
                             time.sleep(1.5)
                 threading.Thread(target=_retry_in, daemon=True).start()
 
+        # Align device/clock tempo with the doc on startup.
+        self._handle_tempo_change(None, self.doc)
+
     # --- State/doc ---
     def get_state(self) -> Dict[str, Any]:
         with self._lock:
@@ -319,6 +322,7 @@ class Conductor:
         with self._lock:
             if base_version != self.doc_version:
                 return {"ok": False, "error": "stale", "expected": self.doc_version}
+            prev_doc = self.doc
             errors = validate_loop(new_doc)
             if errors:
                 return {"ok": False, "error": "validation", "details": errors}
@@ -337,6 +341,10 @@ class Conductor:
                 self._file_mtime = time.time()
             self.doc = canon
             self.engine.replace_doc(self.doc)
+            try:
+                self._handle_tempo_change(prev_doc, self.doc)
+            except Exception:
+                pass
             return {"ok": True, "docVersion": self.doc_version}
         
     # --- Apply scheduling helpers ---
@@ -362,6 +370,27 @@ class Conductor:
                     if any(suffix.startswith(s) for s in track_structural_suffixes):
                         return True
         return False
+
+    @staticmethod
+    def _extract_tempo(doc: Optional[Dict[str, Any]]) -> Optional[float]:
+        if not isinstance(doc, dict):
+            return None
+        try:
+            tempo = doc.get("meta", {}).get("tempo")
+            return float(tempo) if tempo is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    def _handle_tempo_change(self, prev_doc: Optional[Dict[str, Any]], next_doc: Dict[str, Any]) -> None:
+        new_bpm = self._extract_tempo(next_doc)
+        if new_bpm is None:
+            return
+        prev_bpm = self._extract_tempo(prev_doc)
+        if prev_bpm is not None and abs(prev_bpm - new_bpm) < 1e-6:
+            return
+        if self.clock_source == "internal":
+            self.do_set_tempo(new_bpm)
+        self.do_set_tempo_cc(new_bpm)
 
     def _schedule_or_apply(self, base_version: int, doc: Dict[str, Any], structural: bool, apply_now: bool = False) -> Dict[str, Any]:
         if apply_now or not structural or not self.playing:
@@ -443,11 +472,16 @@ async def serve_ws(conductor: Conductor, host: str, port: int):
                         with conductor._lock:
                             errs = validate_loop(loaded)
                             if not errs:
+                                prev_doc = conductor.doc
                                 canon = canonicalize(loaded)
                                 conductor.doc_version = int(canon.get("docVersion", conductor.doc_version)) + 1
                                 canon["docVersion"] = conductor.doc_version
                                 conductor.doc = canon
                                 conductor.engine.replace_doc(conductor.doc)
+                                try:
+                                    conductor._handle_tempo_change(prev_doc, conductor.doc)
+                                except Exception:
+                                    pass
                         await broadcast({"type": "doc", "ts": time.time(), "payload": conductor.get_doc()})
                 except Exception:
                     pass

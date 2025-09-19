@@ -87,6 +87,29 @@ You should see:
 
 **🎉 You're ready!** The system is now running and you can start collaborating with AI assistants.
 
+## Explore Sample Loops
+
+Want to hear what's possible? Check out our curated collection of sample loops with AI creation prompts:
+
+```bash
+# Try a house music loop
+cp samples/house/house-chorus-8bar.json loop.json
+
+# Or start with something gentle
+cp samples/downtempo/lullaby-beat.json loop.json
+
+# Or go hard with industrial techno  
+cp samples/techno/midnight-express.json loop.json
+```
+
+Each sample includes:
+- **Creation prompts** showing how it was made with AI
+- **Musical breakdowns** explaining what makes it work
+- **Variation ideas** for your own experiments
+- **Learning concepts** for understanding the genre
+
+👉 **Browse the full collection:** [`samples/`](samples/) directory
+
 ## Working with AI Assistants
 
 This system is designed to work with AI coding assistants like Claude, Codex, or ChatGPT. The AI can help you:

@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 def bpm_to_cc80(bpm: float) -> int:
-    """Map BPM in [40, 220] to CC80 value 0..127 (inclusive)."""
-    b = max(40.0, min(220.0, float(bpm)))
-    # 0 -> 40, 127 -> 220; linear mapping
-    val = int(round((b - 40.0) / 180.0 * 127.0))
+    """Map requested BPM to CC80 value assuming device interprets CC as BPM*2."""
+    b = max(0.0, float(bpm))
+    val = int(round(b / 2.0))
     return max(0, min(127, val))
 
 
 def cc80_to_bpm(val: int) -> float:
-    """Map CC80 value 0..127 back to BPM in [40, 220]."""
+    """Map CC80 value back to BPM using calibrated slope of 2 BPM per unit."""
     v = max(0, min(127, int(val)))
-    return 40.0 + (v / 127.0) * 180.0
-
+    return float(v * 2.0)
