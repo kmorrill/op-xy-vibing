@@ -160,7 +160,43 @@ Hypothesis for `fx.params` mapping (needs export validation):
 - `type`: enum (see §1.1)
 - `params`: array of **8** ints in `[0, 32767]`
 
-Interpretation is still unknown (likely rate/depth/shape + routing).
+### 5.1 Observed type usage (229 presets)
+
+- `tremolo`: `151` (active `131`)
+- `random`: `46` (active `43`)
+- `value`: `27` (active `19`)
+- `element`: `5` (active `3`)
+
+### 5.2 Number format
+
+- `lfo.params[*]` are stored as **integers**, and in exports they behave like the same normalized “knob space” used by `engine.params[*]` and `fx.params[*]`.
+  - Practical decode: `normalized ≈ value / 32767.0`.
+- Some indices look like **selectors/enums** rather than continuous knobs:
+  - Many presets use values close to `4096*n - 1` (e.g., `4095`, `12287`, `20479`, `28671`, `32767`), which correspond to ~`12.5%`, `37.5%`, `62.5%`, `87.5%`, `100%` when decoded as normalized knobs.
+  - In the corpus, `lfo.params[4]` is strongly “selector-like” across all LFO types; `lfo.params[7]` is especially selector-like for `tremolo`.
+
+### 5.3 Best current guess for param meanings (unconfirmed)
+
+No open-source generator reviewed so far provides an authoritative mapping for `lfo.params[*]`, but the export corpus supports a few high-confidence hypotheses:
+
+- `lfo.params[0]`: **speed/rate** (continuous)
+- `lfo.params[1]`: **amount/depth** (continuous)
+- `lfo.params[4]`: likely a **destination/target selector** (ID-like)
+  - Evidence: `lfo.params[4] + 1` frequently equals the same “destination ID” values seen in `engine.modulation.*.target` (notably `4096`, `20480`, `28672`), suggesting a shared enum/ID space or a shared quantization scheme.
+  - Most common `lfo.params[4]` values in this dataset:
+    - `tremolo`: `0` (92), `28671` (~`28672`) (25), `20479` (~`20480`) (3)
+    - `random`: `0` (13), `28671` (~`28672`) (6), `20479` (~`20480`) (2)
+    - `value`: `28671` (~`28672`) (10), `4095` (~`4096`) (6), `20479` (~`20480`) (5), `0` (2)
+- `lfo.params[7]`: likely another **selector** (shape/mode/trigger), especially for `tremolo`
+  - Evidence: in `tremolo`, `lfo.params[7]` clusters at a small set of values (most commonly `4095` in `76/151` presets), suggesting an enum-like control rather than a free continuous parameter.
+
+The remaining indices appear type-specific and are still not mapped.
+
+Concrete export examples:
+
+- Common `tremolo` vector (34 presets): `[18776, 16052, 5566, 25226, 0, 0, 0, 4095]`
+- Common `sampler`+`random` vector (3 presets): `[9168, 16492, 2000, 15480, 28671, 0, 0, 24083]`
+- Example `sampler`+`value`: `[22138, 24575, 23210, 10239, 28671, 0, 0, 0]`
 
 Hardware/UI notes:
 
@@ -337,8 +373,10 @@ These points don’t introduce new JSON keys, but they matter when **generating*
 - Confirm the exact mapping of:
   - `engine.params[4..7]` (when used)
   - `fx.params[*]` per `fx.type`
-  - `lfo.params[*]` per `lfo.type`
-  - `engine.modulation.*.target` destination IDs
+  - `lfo.params[*]` (especially indices `2`, `3`, `5`, `6`) per `lfo.type`
+  - `lfo.params[4]` destination IDs (and whether `+1` reconstitutes the same destination ID space as `engine.modulation.*.target`)
+  - `lfo.params[7]` selector meaning (shape vs mode vs trigger)
+  - `engine.modulation.*.target` destination IDs (map IDs like `4096`, `20480`, `28672` to named controls)
 - Confirm region mapping rules (especially whether `lokey` is ignored vs respected as a true key range).
 - Confirm loop semantics on device:
   - Is `loop.enabled` truly the “master” loop switch (and is `true` implied when omitted)?
