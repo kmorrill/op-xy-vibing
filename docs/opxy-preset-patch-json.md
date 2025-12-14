@@ -105,6 +105,7 @@ Observed keys (always present unless noted):
 - `velocity.sensitivity`: int `[0, 32767]`
 - `portamento.amount`: int `[0, 32767]`
 - `portamento.type`: int `[0, 32767]` (often `0` or `32767`)
+  - Cross‑check: `op-patchstudio` treats `32767` as **linear** and `0` as **exponential** when exporting (`MultisampleAdvancedSettings.tsx`).
 - `tuning.root`: int (few discrete values observed)
 - `tuning.scale`: int (few discrete values observed)
 - `tuning` (optional): array of **12** floats (observed range about `-15..+12`)
@@ -113,6 +114,7 @@ Observed keys (always present unless noted):
   - `aftertouch`, `modwheel`, `pitchbend`, `velocity`
   - each is an object: `{ "target": <int>, "amount": <int> }`
   - `target` looks like an encoded destination ID; `0` appears to mean “none”.
+  - Cross‑check (templates): several patch generators ship presets with non‑zero targets (e.g. `aftertouch.target=4096`, `modwheel.target=10240` in multisampler templates; `aftertouch.target=18022` in some drum templates). The meaning of specific IDs is still not confirmed.
 
 ## 3) `envelope` object
 
@@ -205,6 +207,11 @@ Practical note: in exported `multisampler` presets, `loop.enabled` is often pres
 
 - All sample frame indices (`sample.start`, `sample.end`, `loop.*`) appear to be expressed in the sample’s frame units (same scale as `framecount`).
   - Think “timestamp in samples”: seconds ≈ `frames / sampleRate` (typically `44100`).
+- **Audio file metadata cross‑check:** multiple patch tools also embed loop points + root notes into the audio files themselves:
+  - WAV: RIFF `smpl` chunk (`rootNote`, `loopStart`, `loopEnd`)
+  - AIFF: `MARK` + `INST` chunks with loop markers (`start`/`end`) + base note
+  - Reference implementation: `op-patchstudio`’s `src/utils/wavExport.ts` and `src/utils/aiffExport.ts`.
+  - Implication: if you generate new `.preset/` samples, it’s safest to keep `patch.json` loop points consistent with any embedded `smpl`/`INST` loop metadata you write (or omit metadata entirely and rely on `patch.json`).
 - `loop.enabled` may be a newer explicit “disable looping” flag; in this dataset it only appears as `false`.
 - `lokey` being always `0` suggests the OP‑XY may be using `hikey` as a region boundary rather than a conventional `[lokey, hikey]` range.
 - Hardware/UI note: very short loop regions can produce audible popping/clicking; increasing loop length and/or using `loop.crossfade` helps.
@@ -244,7 +251,13 @@ This strongly suggests the common intended behavior is:
 - While the key is held: play attack → loop `loop.start..loop.end`
 - On key release: exit the loop and play the remaining tail up to `sample.end`
 
-`loop.onrelease` is `true` in most sampler presets; community generators disagree on its exact meaning, but this “exit loop on release to play tail” behavior matches the dominant structure of the exported presets.
+`loop.onrelease` is `true` in most sampler presets; community tools disagree on its exact meaning. One concrete reference is `op-patchstudio`’s preview audio engine (`src/hooks/useAudioPlayer.ts`), which implements 3 modes with two booleans:
+
+- `loop.enabled=false`: no looping
+- `loop.enabled=true` + `loop.onrelease=false`: loop while held, then **disable looping on release** so the sample can continue past `loop.end` toward `sample.end` (tail)
+- `loop.enabled=true` + `loop.onrelease=true`: loop while held and **keep looping during release** (no tail; release envelope fades out while loop continues)
+
+This matches the on‑device concept of a normal sustain loop plus an “∞” mode, but the exact mapping to OP‑XY’s exported `patch.json` flags still needs direct hardware confirmation.
 
 Hardware/UI cross‑check (transcript): the sampler UI appears to expose three loop behaviors while holding notes:
 
@@ -260,7 +273,7 @@ Open‑source patch generators typically implement sustain looping by:
 
 - Treating `loop.start`/`loop.end` as **frame indices** at the sample’s playback rate (after resampling).
 - Defaulting loop points to a **percent of sample duration** when no explicit loop is provided (the common defaults vary by tool; factory exports often resemble `20%/80%`).
-- Writing `loop.enabled` explicitly for multisamples; for single‑sample presets it’s often omitted in exports.
+- Writing `loop.enabled` explicitly for multisamples; for single‑sample presets it’s often omitted in exports (some exporters appear to omit `loop.enabled` instead of writing `true`).
 - Setting `loop.crossfade` to `0` (many tools), or leaving it at a small constant in factory presets; its exact semantics remain unclear, but looping works without it.
 
 In other words: loop points may be *chosen* in percent, but they’re *stored* in `patch.json` as integer frame indices.
@@ -278,6 +291,9 @@ These conventions show up repeatedly across the open‑source tools listed in §
     - next region’s `lokey = prevRootNote + 1`
     - last region: `hikey = 127`
   - This is implemented in `opxy-drum-tool` (`multisample-tool.html`), `op-patchstudio`, and `maschine-multisample-to-op-xy-converter`.
+- **Alternate multisampler mapping (lokey always 0):** some builders intentionally set `lokey = 0` for every region and rely on `hikey` as an upper boundary only.
+  - Example: `opxy-multisampler-preset-builder` (“lokey is always 0 per working preset example” comment in `src/main.js`).
+  - This matches many exported factory presets in this dataset, but it’s not yet confirmed whether the OP‑XY ignores `lokey` or whether this just works because of region ordering.
 - **Framecount correctness:** the most reliable tools compute `framecount` from decoded audio buffer length *after* resampling, and set `sample.end == framecount` unless trimmed.
   - See `op-patchstudio`’s validation logic in `src/utils/patchGeneration.ts`.
 
@@ -323,7 +339,12 @@ These points don’t introduce new JSON keys, but they matter when **generating*
   - `fx.params[*]` per `fx.type`
   - `lfo.params[*]` per `lfo.type`
   - `engine.modulation.*.target` destination IDs
-- Clarify region mapping rules (especially `lokey`/`hikey`) and loop crossfade semantics; exported presets and community generators don’t always match.
+- Confirm region mapping rules (especially whether `lokey` is ignored vs respected as a true key range).
+- Confirm loop semantics on device:
+  - Is `loop.enabled` truly the “master” loop switch (and is `true` implied when omitted)?
+  - Does `loop.onrelease` correspond to “∞” (keep looping during release) or to “exit loop on release to play tail”?
+  - How (if at all) is `loop.crossfade` interpreted/clamped?
+- Confirm whether OP‑XY reads/depends on embedded loop metadata in WAV/AIFF (RIFF `smpl` / AIFF `INST`), and whether that metadata must match `patch.json`.
 - Derive a permissive JSON Schema once defaults and ranges are confirmed.
 
 ## 8) Sample source sweep: `/Users/Shared` (Native Instruments content)
