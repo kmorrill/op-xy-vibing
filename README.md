@@ -1,164 +1,146 @@
 # OP‑XY Vibe Coding
 
-**Create music collaboratively with AI agents and your OP‑XY in real-time.**
+**Create music collaboratively with AI agents and your OP‑XY in real time.**
 
 ## What is this?
 
-OP‑XY Vibe Coding lets you make music by talking to AI assistants like Claude or Codex. Instead of clicking around in a DAW, you describe what you want ("make the kick punchier", "add a subtle hi-hat shuffle", "try a darker pad sound") and the AI edits your music loop in real-time while you listen.
+OP‑XY Vibe Coding lets you make music by talking to AI assistants like Claude, Codex, or ChatGPT. Instead of clicking around in a DAW, you describe what you want — for example, "make the kick punchier," "add a subtle hi-hat shuffle," or "try a darker pad sound" — and the AI edits a JSON loop that can be played on the OP‑XY over USB‑C MIDI.
 
-**How it works:**
-1. Your music loop is stored as a JSON file that describes drums, bass, chords, and effects
-2. A Python server reads this file and plays it on your OP‑XY via USB-C  
-3. AI assistants edit the JSON while you listen, making changes instantly audible
-4. You collaborate with the AI to refine the loop until it sounds exactly right
+Core loop playback still lives here:
 
-**Perfect for:**
-- Quick musical idea exploration and prototyping
-- Learning music production concepts through conversation  
-- Breaking through creative blocks with AI collaboration
-- Rapid iteration on beats, basslines, and chord progressions
+1. A music loop is stored as JSON.
+2. The Python conductor reads the JSON and plays it on the OP‑XY.
+3. The web UI and WebSocket API allow live editing.
+4. AI assistants can edit the loop while the device is playing.
 
-## First Time Setup
+## Current repo boundary / cross-repo note
 
-**What you'll need:**
-- An OP‑XY device connected via USB-C
-- A Mac computer (primary platform - other platforms may work but aren't tested)
-- 5-10 minutes for setup
+This repository is currently serving two related but distinct jobs:
 
-### Step 1: Get the Code
+1. **Live MIDI loop playback** — the original `op-xy-vibing` purpose. This is the conductor, loop JSON spec, web UI, tests, and OP‑XY MIDI runtime.
+2. **Temporary OP‑XY preset/drop export tooling** — newer helper scripts that generate OP‑XY `.preset` folders and a copy-ready package layout.
+
+The active app/exporter work may ultimately belong in **`op-xy-live`**, but while the exact repo split is still being sorted out, the drop-export tooling is documented and runnable here so the workflow can keep moving.
+
+When moving this later, preserve these invariants:
+
+- Generated presets should live under `presets/<drop-name>/`.
+- Individual presets should live directly inside that drop folder as `.preset` directories.
+- Project/preset mappings should use browser-style paths like `<drop-name>/<preset-name>`.
+- Export code must rewrite every mapped track; do not preserve stale template mappings, even if one track already appears to work.
+- The copy target should be shaped like the OP‑XY root, so the generated `presets/` and `projects/` folders can be copied directly to the device.
+
+## OP‑XY drop-root preset export
+
+The current drop-root exporter is:
 
 ```bash
-git clone https://github.com/your-username/op-xy-vibing.git
-cd op-xy-vibing
+tools/generate_latin_trap_opxy_drop.py
 ```
 
-### Step 2: Install Dependencies
+It creates a copy-ready package at:
 
-**Install system tools (if not already installed):**
-```bash
-# Install Python and MIDI support
-brew install python pkg-config portmidi
+```text
+~/Documents/xy-remix/opxy-copy/
+  presets/
+    latin_trap/
+      LatinTrap_DrumKit.preset/
+        patch.json
+        *.wav
+      LatinTrap_808Sub.preset/
+        patch.json
+        *.wav
+  projects/
+  manifest.json
 ```
 
-**Set up Python environment:**
+Run it with:
+
 ```bash
-# Create isolated environment (recommended)
+make opxy-drop-latin-trap
+```
+
+That target runs the exporter with `--overwrite --open`, so on macOS it opens Finder windows for the generated package root and the per-drop preset folder.
+
+You can customize the drop name or output folder by passing `ARGS`:
+
+```bash
+make opxy-drop-latin-trap ARGS='--drop-name my_drop --out-dir ~/Documents/xy-remix/opxy-copy'
+```
+
+The generated `manifest.json` records the expected track mappings, for example:
+
+```text
+track 1: latin_trap/LatinTrap_DrumKit
+track 2: latin_trap/LatinTrap_808Sub
+```
+
+The matching on-device folder layout should be:
+
+```text
+OP-XY root/
+  presets/
+    latin_trap/
+      LatinTrap_DrumKit.preset/
+      LatinTrap_808Sub.preset/
+  projects/
+    <matching project file>
+```
+
+The key fix is that the drop folder lives directly under root `presets/`, not in a separate side folder. The project file should map tracks to that same browser-visible hierarchy.
+
+## First-time setup
+
+### Requirements
+
+- OP‑XY connected over USB‑C
+- macOS, currently the primary tested platform
+- Python 3
+- `ffmpeg` for preset/sample export tooling
+- MIDI dependencies for live playback
+
+Install common system dependencies:
+
+```bash
+brew install python pkg-config portmidi ffmpeg
+```
+
+Set up Python:
+
+```bash
 python3 -m venv venv
 source venv/bin/activate
-
-# Install music software dependencies
 pip install -r requirements.txt
 ```
 
-### Step 3: Test Your Setup
+Check that the OP‑XY is visible as a MIDI device:
 
-**Make sure your OP‑XY is detected:**
 ```bash
-# Should show "OP-XY" in the list
 python3 -c "import mido; print('MIDI ports:', mido.get_output_names())"
 ```
 
-If you don't see "OP-XY" in the list, check that:
-- Your OP‑XY is powered on and connected via USB-C
-- The USB-C cable supports data (not just charging)
-- You're using a USB-C port, not just USB-A with an adapter
+## Basic playback
 
-### Step 4: Start Making Music
-
-**Launch the server (keep this terminal open):**
-```bash
-# Activate your Python environment first
-source venv/bin/activate
-
-# Start the music server
-python3 -m conductor.conductor_server --loop loop.json --port "OP-XY"
-```
-
-You should see:
-```
-[http] serving UI on http://127.0.0.1:8080  
-[ws] Conductor listening on ws://127.0.0.1:8765
-```
-
-**Open the web interface:**
-- Go to http://127.0.0.1:8080 in your browser
-- You should see a loop grid with drums, bass, and other tracks
-- Press play to hear the current loop on your OP‑XY
-
-**🎉 You're ready!** The system is now running and you can start collaborating with AI assistants.
-
-## Explore Sample Loops
-
-Want to hear what's possible? Check out our curated collection of sample loops with AI creation prompts:
-
-```bash
-# Try a house music loop
-cp samples/house/house-chorus-8bar.json loop.json
-
-# Or start with something gentle
-cp samples/downtempo/lullaby-beat.json loop.json
-
-# Or go hard with industrial techno  
-cp samples/techno/midnight-express.json loop.json
-```
-
-Each sample includes:
-- **Creation prompts** showing how it was made with AI
-- **Musical breakdowns** explaining what makes it work
-- **Variation ideas** for your own experiments
-- **Learning concepts** for understanding the genre
-
-👉 **Browse the full collection:** [`samples/`](samples/) directory
-
-## Working with AI Assistants
-
-This system is designed to work with AI coding assistants like Claude, Codex, or ChatGPT. The AI can help you:
-
-**🎵 Edit your music in real-time:**
-- "Make the kick drum hit harder on beats 1 and 3"
-- "Add a subtle swing to the hi-hats"  
-- "Try a darker, more mysterious chord progression"
-- "Speed up the tempo to 128 BPM"
-
-**🔧 Manage the system:**
-- Start and stop the server
-- Debug MIDI connection issues
-- Add new features to the loop format
-- Run tests and validate changes
-
-**📖 Learn and explore:**
-- "Explain how LFOs work in this system"
-- "Show me different drum patterns I could try"
-- "What's the difference between internal and external clock?"
-
-### For AI Assistants
-
-If you're an AI assistant helping someone with this system, check the `CLAUDE.md` file for detailed guidance on:
-- How to safely start and stop the server
-- The loop JSON format and how to edit it
-- MIDI device safety and troubleshooting
-- Testing and validation procedures
-
-## Advanced Usage
-
-#### Basic Playback
 Play a loop with internal clock:
+
 ```bash
 make play-internal LOOP=loop.json BPM=120 PORT="OP-XY"
 ```
 
-Play with external clock (OP‑XY as master):
+Play with external clock, using the OP‑XY as master:
+
 ```bash
 make play-external LOOP=loop.json PORT="OP-XY"
 ```
 
-#### Full Conductor Server (with WebSocket API)
-Alternative using Makefile:
+Run the full conductor server:
+
 ```bash
 make conductor-run LOOP=loop.json PORT="OP-XY" BPM=120 CLOCK=external
 ```
 
-Direct command with all options:
+Direct form:
+
 ```bash
 python3 -m conductor.conductor_server \
   --loop loop.json \
@@ -169,59 +151,66 @@ python3 -m conductor.conductor_server \
   --ws-port 8765
 ```
 
-### Testing the Installation
+Open the web UI at:
 
-Run clock timing tests:
+```text
+http://127.0.0.1:8080
+```
+
+## Explore sample loops
+
 ```bash
-make clock-smoke
+cp samples/house/house-chorus-8bar.json loop.json
+cp samples/downtempo/lullaby-beat.json loop.json
+cp samples/techno/midnight-express.json loop.json
 ```
 
-Test note lifecycle:
-```bash
-make demo-note
-```
+Each sample is intended to be editable by a human or AI assistant and then played through the conductor.
 
-Run the full test suite:
-```bash
-make test
-```
+## Working with AI assistants
 
-Validate loop fixtures:
-```bash
-make validate-fixtures
-```
+This project is designed for AI-assisted musical iteration. Useful requests include:
 
-## System Architecture
+- "Make the kick drum hit harder on beats 1 and 3."
+- "Add a subtle swing to the hi-hats."
+- "Try a darker chord progression."
+- "Speed up the tempo to 128 BPM."
+- "Generate a drop-root preset package and open the copy folders."
 
-```
-Human ⇄ LLM (Agent)
+For AI assistants: check `CLAUDE.md`, `AGENTS.md`, and `PROJECT_PLAN.md` before making structural changes. Be especially careful with MIDI safety, stuck-note prevention, atomic file writes, and repo-boundary confusion between live playback and preset/export tooling.
+
+## System architecture
+
+```text
+Human ⇄ LLM / Agent
           │
           ▼
-   Conductor (single origin)
-     ├── HTTP UI (static)
-     ├── WebSocket API (doc/state/metrics)
-     ├── File watcher (atomic write/watch)
-     ├── Git (batched commits)
-     └── Playbook Engine ⇄ OP‑XY (USB‑C MIDI)
+   Conductor
+     ├── HTTP UI
+     ├── WebSocket API
+     ├── File watcher / atomic writes
+     ├── Git-backed iteration
+     └── Playback Engine ⇄ OP‑XY over USB‑C MIDI
 
-Spec: docs/opxyloop-1.0.md (normative)
+Spec: docs/opxyloop-1.0.md
 ```
 
-## Key Features
+The drop-export path currently sits alongside this architecture as a utility workflow:
 
-- **Real-time MIDI playback** with external or internal clock sync
-- **JSON-based loop format** optimized for AI agent collaboration
-- **WebSocket API** for live editing and state monitoring
-- **Atomic file operations** with Git version control
-- **Robust note lifecycle** management with panic recovery
-- **CC and LFO automation** with phase-locked modulation
-- **Web-based UI** for visual loop editing
+```text
+NI/shared samples → preset generator → opxy-copy/presets/<drop-name>/... → OP‑XY root
+```
 
-## Loop Format
+## Loop format
 
-Loops are defined using the `opxyloop‑1.0` JSON specification. See `docs/opxyloop-1.0.md` for the complete format documentation.
+Loops are defined using the `opxyloop‑1.0` JSON specification. See:
 
-Example minimal loop:
+```text
+docs/opxyloop-1.0.md
+```
+
+Minimal example:
+
 ```json
 {
   "version": "opxyloop-1.0",
@@ -245,137 +234,100 @@ Example minimal loop:
 }
 ```
 
-## Available Commands
+## Available commands
 
 ### Playback
-- `make play-internal` - Play with internal clock
-- `make play-external` - Play with external clock (OP‑XY master)
-- `make conductor-run` - Start full conductor server
+
+- `make play-internal` — play with internal clock
+- `make play-external` — play with external clock, OP‑XY master
+- `make conductor-run` — start the full conductor server
+
+### Drop / preset export
+
+- `make opxy-drop-latin-trap` — generate the temporary Latin trap OP‑XY copy package and open Finder windows
 
 ### Development
-- `make test` - Run test suite  
-- `make clock-smoke` - Test timing accuracy
-- `make demo-note` - Test note lifecycle
-- `make validate` - Validate a loop file
-- `make validate-fixtures` - Validate all test fixtures
+
+- `make test` — run the test suite
+- `make clock-smoke` — test clock timing
+- `make demo-note` — test note lifecycle
+- `make validate FILE=<path>` — validate a loop file
+- `make validate-fixtures` — validate all test fixtures
 
 ### Utilities
-- `make panic` - Send MIDI panic (All Notes Off)
-- `make kill-procs` - Kill running processes
-- `make ui-serve` - Serve web interface
 
-### WebSocket Control
-- `make ws-tempo BPM=130` - Change tempo via WebSocket
-- `make ws-patch-vel VEL=105` - Modify velocity via JSON patch
+- `make panic PORT="OP-XY"` — send MIDI panic / all notes off
+- `make kill-procs` — kill running conductor/player/helper processes
+- `make kill-ws-port` — kill anything listening on the WebSocket port
+- `make ui-serve` — serve the web UI
 
-## Development Status
+### WebSocket control
 
-This project is in active development. See `PROJECT_PLAN.md` for detailed roadmap and current milestone progress.
+- `make ws-tempo BPM=130` — change tempo via WebSocket
+- `make ws-patch-vel VEL=105` — modify velocity via JSON patch
 
-### Current Features ✅
-- Loop JSON validation and canonical formatting
-- Real-time MIDI playback engine
-- Internal and external clock synchronization
-- Note lifecycle management with panic recovery
-- WebSocket API for live control
-- Basic web UI for loop visualization
+## File structure
 
-### Planned Features 🚧
-- Advanced web UI with step sequencer grid
-- Multi-track drum support with choke groups
-- Enhanced LFO and automation features
-- Seek/catch-up functionality
-- Device profile management
-
-## File Structure
-
-```
+```text
 conductor/          # Core playback engine and server
 ├── midi_engine.py  # Real-time MIDI scheduling
-├── clock.py        # Internal/external clock handling  
+├── clock.py        # Internal/external clock handling
 ├── ws_server.py    # WebSocket API server
 ├── validator.py    # Loop JSON validation
 └── tests/          # Test suite and fixtures
 
 ui/                 # Web interface
-├── index.html      # Main UI page
-└── app.js         # Frontend JavaScript
+├── index.html
+└── app.js
 
 docs/               # Documentation
-├── opxyloop-1.0.md # Loop format specification
-└── ...            # Additional documentation
+├── opxyloop-1.0.md
+└── ...
 
-tools/              # Utilities
-├── wsctl.py       # WebSocket client for testing
-└── panic.py       # Emergency MIDI panic
+tools/              # Utilities and temporary export helpers
+├── wsctl.py
+├── panic.py
+├── generate_latin_trap_presets.py
+└── generate_latin_trap_opxy_drop.py
 
 favorites/          # Example loops
-├── demo-loop-*.json
-└── ...
+samples/            # Curated sample loops
 ```
-
-## Contributing
-
-1. Read the `PROJECT_PLAN.md` for architecture and milestone details
-2. Check the test suite runs: `make test`
-3. Validate timing: `make clock-smoke`
-4. Follow the loop specification in `docs/opxyloop-1.0.md`
-
-## License
-
-This project is open source. See `LICENSE` file for details.
 
 ## Troubleshooting
 
-### Installation Issues
+### OP‑XY not detected
 
-#### Python/pip not found
+- Make sure the OP‑XY is powered on and connected with a data-capable USB‑C cable.
+- Check MIDI ports:
+
 ```bash
-# On macOS, install Python via Homebrew
-brew install python
-
-# Use python3 and pip3 explicitly
-python3 --version
-pip3 --version
+python3 -c "import mido; print(mido.get_output_names())"
 ```
 
-#### python-rtmidi installation fails
-```bash
-# Install system dependencies first
-brew install pkg-config portmidi
+### Presets copied but project does not load the right sounds
 
-# Then retry pip install
-pip3 install python-rtmidi>=1.5
+- Confirm the drop folder is directly under `presets/` on the OP‑XY.
+- Confirm each preset is a `.preset` directory containing `patch.json` and its WAV files.
+- Confirm the project mapping uses `<drop-name>/<preset-name>` and not an old template preset.
+- Re-run `make opxy-drop-latin-trap` and inspect `manifest.json` for the expected track mappings.
+
+### WebSocket errors
+
+```bash
+make kill-procs
+make kill-ws-port
+make conductor-run LOOP=loop.json PORT="OP-XY" BPM=120 CLOCK=external
 ```
 
-#### ModuleNotFoundError
+### Hanging notes
+
 ```bash
-# Make sure you're in the project directory
-cd op-xy-vibing
-
-# Verify dependencies are installed
-pip3 list | grep -E "(mido|rtmidi|websockets|jsonpatch)"
-
-# Reinstall if needed
-pip3 install -r requirements.txt
+make panic PORT="OP-XY"
 ```
 
-### MIDI Connection Issues
-- Ensure OP‑XY is connected via USB-C
-- Check MIDI port name: `python3 -c "import mido; print(mido.get_output_names())"`
-- Use correct port name in `PORT` parameter
+Then check that the loop and runtime are correctly sending note-offs and all-notes-off on transport stop.
 
-### Timing Problems
-- Run `make clock-smoke` to check timing accuracy
-- External clock issues: verify OP‑XY is sending MIDI clock
-- High jitter: close other applications, check CPU load
+## Development status
 
-### WebSocket Errors
-- Kill existing processes: `make kill-procs`
-- Check port 8765 availability: `make kill-ws-port`
-- Restart conductor: `make conductor-run`
-
-### Note Hanging
-- Send MIDI panic: `make panic PORT="OP-XY"`
-- Check active notes are properly tracked in logs
-- Verify All Notes Off on transport stop
+This project is active and experimental. The live playback system belongs here today. The preset/drop export tooling is currently here as a practical bridge, but may move to `op-xy-live` once the repo boundary is cleaned up.
