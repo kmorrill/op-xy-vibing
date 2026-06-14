@@ -98,3 +98,7 @@ play-vel-ab-ch1-d3:
 .PHONY: play-vel-alt-ch1-d3
 play-vel-alt-ch1-d3:
 	@$(PY) -m conductor.play_local conductor/tests/fixtures/loop-vel-alt-ch1-d3.json --mode internal --bpm $(BPM) --port "$(PORT)" --loops $(LOOPS)
+
+.PHONY: opxy-drop-latin-trap
+opxy-drop-latin-trap:
+	@$(PY) tools/generate_latin_trap_opxy_drop.py --overwrite --open $(ARGS)
